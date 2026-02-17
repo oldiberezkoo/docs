@@ -13,17 +13,17 @@ export default defineConfig({
 	},
 	files: [
 		{
-			include: ['src/content/i18n/en.yml'],
+			include: ['src/content/i18n/ru.yml'],
 			pattern: 'src/content/i18n/@tag.yml',
 			type: 'dictionary',
 		},
 		{
-			include: ['src/content/nav/en.ts'],
+			include: ['src/content/nav/ru.ts'],
 			pattern: 'src/content/nav/@tag.ts',
 			type: 'dictionary',
 		},
 		{
-			include: ['src/content/docs/en/**/*.(md|mdx)'],
+			include: ['src/content/docs/ru/**/*.(md|mdx)'],
 			pattern: 'src/content/docs/@lang/@path',
 			type: 'universal',
 		},
