@@ -1,0 +1,51 @@
+---
+title: Экспериментальная рабочая область Chrome DevTools
+sidebar:
+  label: Рабочая область Chrome DevTools
+i18nReady: true
+---
+
+import Since from '~/components/Since.astro';
+import { Steps } from '@astrojs/starlight/components';
+
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+<Since v="5.13.0" />
+</p>
+
+Включает экспериментальную [интеграцию с рабочей областью Chrome DevTools](https://developer.chrome.com/docs/devtools/workspaces) для сервера разработки Astro.
+
+Эта функция позволяет редактировать файлы прямо в Chrome DevTools и отражать эти изменения в вашей локальной файловой системе через подключенную папку рабочей области. Это полезно для применения правок, таких как настройка значений CSS, не покидая вкладку браузера.
+
+При включенной функции запуск `astro dev` автоматически настроит рабочую область Chrome DevTools для вашего проекта. Затем ваш проект появится как доступный [источник рабочей области, который вы можете подключить](#подключение-вашего-проекта). После этого изменения, внесенные вами в панели «Sources» (Источники), будут автоматически сохраняться в исходном коде вашего проекта.
+
+Чтобы включить эту функцию, добавьте экспериментальный флаг `chromeDevtoolsWorkspace` в вашу конфигурацию Astro:
+
+```js title="astro.config.mjs" ins={4-6}
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    chromeDevtoolsWorkspace: true,
+  },
+});
+```
+
+## Подключение вашего проекта
+
+Astro создаст необходимый файл конфигурации для поддержки рабочих областей Chrome DevTools. Однако ваш проект также должен быть [подключен как источник](https://developer.chrome.com/docs/devtools/workspaces#manual-connection), чтобы включить сохранение файлов.
+
+<Steps>
+
+1. [Запустите сервер разработки Astro](/ru/develop-and-build/#запуск-сервера-разработки-astro) с помощью соответствующей команды CLI для вашего менеджера пакетов.
+
+2. Перейдите к предварительному просмотру вашего сайта (например, `http://localhost:4321/`) в Chrome и откройте DevTools.
+
+3. На вкладке **Sources** > **Workspaces** (Источники > Рабочие области) вы найдете папку вашего проекта Astro. Нажмите **Connect** (Подключить), чтобы добавить вашу директорию в качестве рабочей области.
+
+</Steps>
+
+Смотрите [документацию по рабочей области Chrome DevTools](https://developer.chrome.com/docs/devtools/workspaces#connect) для получения дополнительной информации.

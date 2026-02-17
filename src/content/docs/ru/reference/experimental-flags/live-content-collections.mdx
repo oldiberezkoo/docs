@@ -1,0 +1,635 @@
+---
+title: Экспериментальные живые коллекции контента
+sidebar:
+  label: Живые коллекции контента
+i18nReady: true
+---
+
+import Since from '~/components/Since.astro';
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+
+<Since v="5.10.0" />
+</p>
+
+Включает поддержку живых (live) коллекций контента в вашем проекте.
+
+Живые коллекции контента — это новый тип [коллекции контента](/ru/guides/content-collections/), который получает свои данные во время выполнения (runtime), а не во время сборки. Это позволяет получать доступ к часто обновляемым данным из CMS, API, баз данных или других источников с использованием единого API, без необходимости пересобирать сайт при изменении данных.
+
+## Основное использование
+
+Чтобы включить эту функцию, убедитесь, что у вас настроен адаптер для [рендеринга по требованию](/ru/guides/on-demand-rendering/), и добавьте флаг `experimental.liveContentCollections` в файл `astro.config.mjs`:
+
+```js title="astro.config.mjs"
+{
+  experimental: {
+    liveContentCollections: true,
+  },
+}
+```
+
+Затем создайте новый файл `src/live.config.ts` (рядом с `src/content.config.ts`, если он у вас есть), чтобы определить ваши живые коллекции с помощью [живого загрузчика (loader)](#создание-живого-загрузчика) и, опционально, [схемы](#использование-схем-zod), используя новую функцию `defineLiveCollection()` из модуля `astro:content`.
+
+```ts title="src/live.config.ts"
+import { defineLiveCollection } from 'astro:content';
+import { storeLoader } from '@mystore/astro-loader';
+
+const products = defineLiveCollection({
+  loader: storeLoader({
+    apiKey: process.env.STORE_API_KEY,
+    endpoint: 'https://api.mystore.com/v1',
+  }),
+});
+
+export const collections = { products };
+```
+
+Затем вы можете использовать специальные функции `getLiveCollection()` и `getLiveEntry()` для доступа к вашим живым данным:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveCollection, getLiveEntry } from 'astro:content';
+
+// Получить все товары
+const { entries: allProducts, error } = await getLiveCollection('products');
+if (error) {
+  // Обработайте ошибку соответствующим образом
+  console.error(error.message);
+}
+
+// Получить товары с фильтром (если поддерживается вашим загрузчиком)
+const { entries: electronics } = await getLiveCollection('products', { category: 'electronics' });
+
+// Получить один товар по ID (строковый синтаксис)
+const { entry: product, error: productError } = await getLiveEntry('products', Astro.params.id);
+if (productError) {
+  return Astro.redirect('/404');
+}
+
+// Получить один товар с пользовательским запросом (если поддерживается вашим загрузчиком) используя объект фильтра
+const { entry: productBySlug } = await getLiveEntry('products', { slug: Astro.params.slug });
+---
+```
+
+## Когда использовать живые коллекции контента
+
+Живые коллекции контента предназначены для данных, которые часто меняются и должны быть актуальными при запросе страницы. Рассмотрите возможность их использования, когда:
+
+- **Вам нужна информация в реальном времени** (например, данные конкретного пользователя, текущие уровни запасов)
+- **Вы хотите избежать постоянных пересборок** для контента, который часто меняется
+- **Ваши данные часто обновляются** (например, ежеминутный учет товаров, цены, наличие)
+- **Вам нужно передавать динамические фильтры** в источник данных на основе ввода пользователя или параметров запроса
+- **Вы создаете функциональность предпросмотра** для CMS, где редакторам нужно сразу видеть черновой контент
+
+Напротив, используйте коллекции контента времени сборки (build-time), когда:
+
+- **Производительность критична**, и вы хотите предварительно отрендерить данные во время сборки
+- **Ваши данные относительно статичны** (например, посты в блоге, документация, описания продуктов)
+- **Вы хотите воспользоваться оптимизацией времени сборки** и кэшированием
+- **Вам нужно обрабатывать MDX** или выполнять оптимизацию изображений
+- **Ваши данные могут быть получены один раз и использованы повторно** в нескольких сборках
+
+Смотрите [ограничения экспериментальных живых коллекций](#ограничения-живых-коллекций) и [ключевые отличия от коллекций времени сборки](#отличия-от-коллекций-времени-сборки) для получения более подробной информации о выборе между живыми и предварительно загруженными коллекциями.
+
+## Использование живых коллекций
+
+Вы можете [создать свои собственные живые загрузчики](#создание-живого-загрузчика) для вашего источника данных или использовать загрузчики сообщества, распространяемые как npm-пакеты. Вот как можно использовать примеры загрузчиков CMS и электронной коммерции:
+
+```ts title="src/live.config.ts"
+import { defineLiveCollection } from 'astro:content';
+import { cmsLoader } from '@example/cms-astro-loader';
+import { productLoader } from '@example/store-astro-loader';
+
+const articles = defineLiveCollection({
+  loader: cmsLoader({
+    apiKey: process.env.CMS_API_KEY,
+    contentType: 'article',
+  }),
+});
+
+const products = defineLiveCollection({
+  loader: productLoader({
+    apiKey: process.env.STORE_API_KEY,
+  }),
+});
+
+export const collections = { articles, products };
+```
+
+Затем вы можете получить контент от обоих загрузчиков с помощью единого API:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveCollection, getLiveEntry } from 'astro:content';
+
+// Используйте фильтры, специфичные для загрузчика
+const { entries: draftArticles } = await getLiveCollection('articles', {
+  status: 'draft',
+  author: 'john-doe',
+});
+
+// Получить конкретный товар по ID
+const { entry: product } = await getLiveEntry('products', Astro.params.slug);
+---
+```
+
+### Обработка ошибок
+
+Живые загрузчики могут давать сбой из-за проблем с сетью, ошибок API или проблем валидации. API разработан так, чтобы сделать обработку ошибок явной.
+
+Когда вы вызываете `getLiveCollection()` или `getLiveEntry()`, ошибка будет одной из:
+
+- Тип ошибки, определенный загрузчиком (если он вернул ошибку)
+- `LiveEntryNotFoundError`, если запись не найдена
+- `LiveCollectionValidationError`, если данные коллекции не соответствуют ожидаемой схеме
+- `LiveCollectionCacheHintError`, если подсказка кэша недействительна
+- `LiveCollectionError` для других ошибок, таких как неперехваченные ошибки, выброшенные в загрузчике
+
+У этих ошибок есть статический метод `is()`, который вы можете использовать для проверки типа ошибки во время выполнения:
+
+```astro "LiveEntryNotFoundError.is(error)"
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry, LiveEntryNotFoundError } from 'astro:content';
+
+const { entry, error } = await getLiveEntry('products', Astro.params.id);
+
+if (error) {
+  if (LiveEntryNotFoundError.is(error)) {
+    console.error(`Товар не найден: ${error.message}`);
+    Astro.response.status = 404;
+  } else {
+    console.error(`Ошибка загрузки товара: ${error.message}`);
+    return Astro.redirect('/500');
+  }
+}
+---
+```
+
+## Создание живого загрузчика
+
+Живой загрузчик — это объект с двумя методами: `loadCollection()` и `loadEntry()`. Эти методы должны корректно обрабатывать ошибки и возвращать либо данные, либо объект [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error).
+
+Стандартный шаблон — экспортировать функцию, которая возвращает этот объект загрузчика, позволяя передавать параметры конфигурации, такие как ключи API или конечные точки.
+
+Вот базовый пример:
+
+```ts title="myloader.ts"
+import type { LiveLoader } from 'astro/loaders';
+import { fetchFromCMS } from './cms-client.js';
+
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+}
+
+export function articleLoader(config: { apiKey: string }): LiveLoader<Article> {
+  return {
+    name: 'article-loader',
+    loadCollection: async ({ filter }) => {
+      try {
+        const articles = await fetchFromCMS({
+          apiKey: config.apiKey,
+          type: 'article',
+          filter,
+        });
+
+        return {
+          entries: articles.map((article) => ({
+            id: article.id,
+            data: article,
+          })),
+        };
+      } catch (error) {
+        return {
+          error: new Error(`Не удалось загрузить статьи: ${error.message}`),
+        };
+      }
+    },
+    loadEntry: async ({ filter }) => {
+      try {
+        // filter будет { id: "some-id" } при вызове со строкой
+        const article = await fetchFromCMS({
+          apiKey: config.apiKey,
+          type: 'article',
+          id: filter.id,
+        });
+
+        if (!article) {
+          return {
+            error: new Error('Статья не найдена'),
+          };
+        }
+
+        return {
+          id: article.id,
+          data: article,
+        };
+      } catch (error) {
+        return {
+          error: new Error(`Не удалось загрузить статью: ${error.message}`),
+        };
+      }
+    },
+  };
+}
+```
+
+### Рендеринг контента
+
+Загрузчик может добавить поддержку напрямую отображаемого контента, вернув [свойство `rendered`](/ru/reference/content-loader-reference/#rendered) в записи. Это позволяет использовать [функцию `render()` и компонент `<Content />`](/ru/guides/content-collections/#рендеринг-контента) для рендеринга контента непосредственно на ваших страницах.
+Если загрузчик не возвращает свойство `rendered` для записи, компонент `<Content />` ничего не отрендерит.
+
+```ts title="myloader.ts" {16-19}
+// ...
+export function articleLoader(config: { apiKey: string }): LiveLoader<Article> {
+  return {
+    name: 'article-loader',
+    loadEntry: async ({ filter }) => {
+      try {
+        const article = await fetchFromCMS({
+          apiKey: config.apiKey,
+          type: 'article',
+          id: filter.id,
+        });
+
+        return {
+          id: article.id,
+          data: article,
+          rendered: {
+            // Предполагая, что CMS возвращает HTML-контент
+            html: article.htmlContent,
+          },
+        };
+      } catch (error) {
+        return {
+          error: new Error(`Не удалось загрузить статью: ${error.message}`),
+        };
+      }
+    },
+    // ...
+  };
+}
+```
+
+Затем вы можете рендерить как контент, так и метаданные из записей живой коллекции на страницах, используя тот же метод, что и для коллекций времени сборки. У вас также есть доступ к любой [ошибке, возвращаемой живым загрузчиком](#обработка-ошибок-в-загрузчиках), например, для перезаписи на страницу 404, когда контент не может быть отображен:
+
+```astro "render(entry)" "<Content />"
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry, render } from 'astro:content';
+const { entry, error } = await getLiveEntry('articles', Astro.params.id);
+if (error) {
+  return Astro.rewrite('/404');
+}
+
+const { Content } = await render(entry);
+---
+
+<h1>{entry.data.title}</h1>
+<Content />
+```
+
+### Обработка ошибок в загрузчиках
+
+Загрузчики должны обрабатывать все ошибки и возвращать подкласс [Error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Error) для ошибок. Вы можете создавать пользовательские типы ошибок и использовать их для более конкретной обработки ошибок, если это необходимо. Если в загрузчике выбрасывается ошибка, она будет перехвачена и возвращена, обернутая в `LiveCollectionError`. Вы также можете создавать [пользовательские типы ошибок](#пользовательские-типы-ошибок) для правильной типизации.
+
+Astro сгенерирует некоторые ошибки самостоятельно, в зависимости от ответа от загрузчика:
+
+- Если `loadEntry` возвращает `undefined`, Astro вернет пользователю `LiveEntryNotFoundError`.
+- Если для коллекции определена схема и данные не соответствуют схеме, Astro вернет `LiveCollectionValidationError`.
+- Если загрузчик возвращает недействительную подсказку кэша, Astro вернет `LiveCollectionCacheHintError`. Поле `cacheHint` является необязательным, поэтому, если у вас нет действительных данных для возврата, вы можете просто опустить его.
+
+```ts title="my-loader.ts" {9-11}
+import type { LiveLoader } from 'astro/loaders';
+import { MyLoaderError } from './errors.js';
+
+export function myLoader(config): LiveLoader<MyData, undefined, undefined, MyLoaderError> {
+  return {
+    name: 'my-loader',
+    loadCollection: async ({ filter }) => {
+      // Возврат вашего пользовательского типа ошибки
+      return {
+        error: new MyLoaderError('Не удалось загрузить', 'LOAD_ERROR'),
+      };
+    },
+    // ...
+  };
+}
+```
+
+### Распространение вашего загрузчика
+
+Загрузчики могут быть определены на вашем сайте или как отдельный npm-пакет. Если вы хотите поделиться своим загрузчиком с сообществом, вы можете [опубликовать его в NPM с ключевыми словами `astro-component` и `astro-loader`](/ru/reference/publish-to-npm/#данные-packagejson).
+
+Загрузчик должен экспортировать функцию, которая возвращает объект `LiveLoader`, позволяя пользователям настраивать его со своими собственными параметрами.
+
+## Типобезопасность
+
+Как и обычные коллекции контента, живые коллекции могут быть типизированы для обеспечения безопасности типов в ваших данных. [Использование схем Zod](#использование-схем-zod) поддерживается, но не является обязательным для определения типов для живых коллекций. В отличие от предварительно загруженных коллекций, определенных во время сборки, живые загрузчики могут вместо этого выбрать передачу общих (generic) типов в интерфейс `LiveLoader`.
+Вы можете определить типы для данных вашей коллекции и записи, а также пользовательские типы фильтров для запросов и пользовательские типы ошибок для обработки ошибок.
+
+### Типобезопасные данные
+
+Живые загрузчики могут определять типы для данных, которые они возвращают. Это позволяет TypeScript обеспечивать проверку типов и автодополнение при работе с данными в ваших компонентах.
+
+```ts title="store-loader.ts" "LiveLoader<Product>" "type Product"
+import type { LiveLoader } from 'astro/loaders';
+import { fetchProduct, fetchCategory, type Product } from './store-client';
+
+export function storeLoader(): LiveLoader<Product> {
+  // ...
+}
+```
+
+Когда вы используете `getLiveCollection()` или `getLiveEntry()`, TypeScript будет выводить типы на основе определения загрузчика:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry } from 'astro:content';
+const { entry: product } = await getLiveEntry('products', '123');
+// TypeScript знает, что product.data имеет тип Product
+console.log(product?.data.name);
+---
+```
+
+### Типобезопасные фильтры
+
+Живые загрузчики могут определять пользовательские типы фильтров как для `getLiveCollection()`, так и для `getLiveEntry()`. Это включает типобезопасные запросы, которые соответствуют возможностям вашего API, что облегчает пользователям обнаружение доступных фильтров и гарантирует их правильное использование. Если вы включите комментарии JSDoc в свои типы фильтров, пользователь увидит их в своей IDE в качестве подсказок при использовании загрузчика.
+
+```ts title="store-loader.ts" "EntryFilter, CollectionFilter" {6,8}
+import type { LiveLoader } from 'astro/loaders';
+import { fetchProduct, fetchCategory, type Product } from './store-client';
+
+interface CollectionFilter {
+  category?: string;
+  /** Минимальная цена для фильтрации товаров */
+  minPrice?: number;
+  /** Максимальная цена для фильтрации товаров */
+  maxPrice?: number;
+}
+
+interface EntryFilter {
+  /** Псевдоним для `sku` */
+  id?: string;
+  slug?: string;
+  sku?: string;
+}
+
+export function productLoader(config: {
+  apiKey: string;
+  endpoint: string;
+}): LiveLoader<Product, EntryFilter, CollectionFilter> {
+  return {
+    name: 'product-loader',
+    loadCollection: async ({ filter }) => {
+      // filter типизирован как CollectionFilter
+      const data = await fetchCategory({
+        apiKey: config.apiKey,
+        category: filter?.category ?? 'all',
+        minPrice: filter?.minPrice,
+        maxPrice: filter?.maxPrice,
+      });
+
+      return {
+        entries: data.products.map((product) => ({
+          id: product.sku,
+          data: product,
+        })),
+      };
+    },
+    loadEntry: async ({ filter }) => {
+      // filter типизирован как EntryFilter | { id: string }
+      const product = await fetchProduct({
+        apiKey: config.apiKey,
+        slug: filter.slug,
+        sku: filter.sku || filter.id,
+      });
+      if (!product) {
+        return {
+          error: new Error('Товар не найден'),
+        };
+      }
+      return {
+        id: product.sku,
+        entry: product,
+      };
+    },
+  };
+}
+```
+
+### Пользовательские типы ошибок
+
+Вы можете создавать пользовательские типы ошибок для [ошибок, возвращаемых вашим загрузчиком](#обработка-ошибок-в-загрузчиках), и передавать их как generic для получения правильной типизации:
+
+```ts title="my-loader.ts"
+class MyLoaderError extends Error {
+  constructor(
+    message: string,
+    public code?: string
+  ) {
+    super(message);
+    this.name = 'MyLoaderError';
+  }
+}
+
+export function myLoader(config): LiveLoader<MyData, undefined, undefined, MyLoaderError> {
+  return {
+    name: 'my-loader',
+    loadCollection: async ({ filter }) => {
+      // Возврат вашего пользовательского типа ошибки
+      return {
+        error: new MyLoaderError('Не удалось загрузить', 'LOAD_ERROR'),
+      };
+    },
+    // ...
+  };
+}
+```
+
+Когда вы используете `getLiveCollection()` или `getLiveEntry()`, TypeScript выведет пользовательский тип ошибки, позволяя вам обрабатывать его соответствующим образом:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry } from 'astro:content';
+
+const { entry, error } = await getLiveEntry('products', '123');
+
+if (error) {
+  if (error.name === 'MyLoaderError') {
+    console.error(`Ошибка загрузчика: ${error.message} (код: ${error.code})`);
+  } else {
+    console.error(`Неожиданная ошибка: ${error.message}`);
+  }
+  return Astro.rewrite('/500');
+}
+---
+```
+
+## Использование схем Zod
+
+Как и в случае с коллекциями времени сборки, вы можете использовать [схемы Zod](/ru/guides/content-collections/#определение-схемы-коллекции) с живыми коллекциями для валидации и трансформации данных во время выполнения. Когда вы определяете схему, она имеет приоритет над [типами загрузчика](#типобезопасные-данные), когда вы запрашиваете коллекцию:
+
+```ts title="src/live.config.ts"
+import { defineLiveCollection } from 'astro:content';
+import { z } from 'astro/zod';
+import { apiLoader } from './loaders/api-loader';
+
+const products = defineLiveCollection({
+  loader: apiLoader({ endpoint: process.env.API_URL }),
+  schema: z
+    .object({
+      id: z.string(),
+      name: z.string(),
+      price: z.number(),
+      // Преобразование формата категории API
+      category: z.string().transform((str) => str.toLowerCase().replace(/\s+/g, '-')),
+      // Приведение даты к объекту Date
+      createdAt: z.coerce.date(),
+    })
+    .transform((data) => ({
+      ...data,
+      // Добавить отформатированное поле цены
+      displayPrice: `$${data.price.toFixed(2)}`,
+    })),
+});
+
+export const collections = { products };
+```
+
+При использовании схем Zod ошибки валидации автоматически перехватываются и возвращаются как объекты `AstroError`:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry, LiveCollectionValidationError } from 'astro:content';
+
+const { entry, error } = await getLiveEntry('products', '123');
+
+// Вы можете обрабатывать ошибки валидации конкретно
+if (LiveCollectionValidationError.is(error)) {
+  console.error(error.message);
+  return Astro.rewrite('/500');
+}
+
+// TypeScript знает, что entry.data соответствует вашей схеме Zod, а не типу загрузчика
+console.log(entry?.data.displayPrice); // например, "$29.99"
+---
+```
+
+## Подсказки кэша (Cache hints)
+
+Живые загрузчики могут предоставлять подсказки кэша, чтобы помочь с кэшированием ответов. Вы можете использовать эти данные для отправки HTTP-заголовков кэша или иным образом информировать вашу стратегию кэширования.
+
+```ts title="my-loader.ts"
+import type { LiveLoader } from "astro/loaders";
+import { loadStoreProduct, loadStoreProducts, getLastModifiedDate } from "./store";
+import type { MyData } from "./types";
+
+export function myLoader(config): LiveLoader<MyData> {
+  return {
+    name: 'cached-loader',
+    loadCollection: async ({ filter }) => {
+      const products = await loadStoreProducts(filter);
+      return {
+        entries: products.map((item) => ({
+          id: item.id,
+          data: item,
+          // Вы можете опционально предоставить подсказки кэша для каждой записи
+          cacheHint: {
+            tags: [`product-${item.id}`, `category-${item.category}`],
+          },
+        })),
+        cacheHint: {
+          // Все поля являются необязательными и объединяются с подсказками кэша каждой записи
+          // теги объединяются из всех записей
+          // lastModified - это самая последняя lastModified из всех записей и коллекции
+          lastModified: getLastModifiedDate(products),
+          tags: ['products'],
+        },
+      };
+    },
+    loadEntry: async ({ filter }) => {
+      const item = await loadStoreProduct(filter);
+      return {
+        id: item.id,
+        data: item,
+        cacheHint: {
+          lastModified: new Date(item.lastModified),
+          tags: [`product-${item.id}`, `category-${item.category}`],
+        },
+      };
+    },
+  };
+}
+```
+
+Затем вы можете использовать эти подсказки на своих страницах:
+
+```astro
+---
+export const prerender = false; // Не требуется в режиме 'server'
+
+import { getLiveEntry } from 'astro:content';
+
+const { entry, error, cacheHint } = await getLiveEntry('products', Astro.params.id);
+
+if (error) {
+  return Astro.redirect('/404');
+}
+
+// Применить подсказки кэша к заголовкам ответа
+if (cacheHint?.tags) {
+  Astro.response.headers.set('Cache-Tag', cacheHint.tags.join(','));
+}
+if (cacheHint?.lastModified) {
+  Astro.response.headers.set('Last-Modified', cacheHint.lastModified.toUTCString());
+}
+---
+
+<h1>{entry.data.name}</h1>
+<p>{entry.data.description}</p>
+```
+
+:::note
+Подсказки кэша предоставляют только значения, которые можно использовать в других частях вашего проекта, и не приводят автоматически к кэшированию ответа Astro. Вы можете использовать их для создания собственной стратегии кэширования, например, для установки HTTP-заголовков или использования CDN.
+:::
+
+## Ограничения живых коллекций
+
+Живые коллекции контента имеют некоторые ограничения по сравнению с коллекциями времени сборки:
+
+- **Нет поддержки MDX**: MDX не может быть отрендерен во время выполнения
+- **Нет оптимизации изображений**: Изображения не могут быть обработаны во время выполнения
+- **Соображения производительности**: Данные извлекаются при каждом запросе (если не кэшируются)
+- **Нет сохранения хранилища данных**: Данные не сохраняются в хранилище данных content layer
+
+## Отличия от коллекций времени сборки
+
+Живые коллекции используют другой API, чем текущие предварительно загруженные коллекции контента. Основные отличия включают:
+
+1. **Время выполнения**: Запуск во время запроса вместо времени сборки
+2. **Файл конфигурации**: Используйте `src/live.config.ts` вместо `src/content.config.ts`
+3. **Определение коллекции**: Используйте `defineLiveCollection()` вместо `defineCollection()`
+4. **API загрузчика**: Реализуйте методы `loadCollection` и `loadEntry` вместо метода `load`
+5. **Возврат данных**: Возвращайте данные напрямую вместо сохранения в хранилище данных
+6. **Функции для пользователя**: Используйте `getLiveCollection`/`getLiveEntry` вместо `getCollection`/`getEntry`
+
+Для полного обзора и обратной связи по этому экспериментальному API смотрите [RFC по живым коллекциям контента](https://github.com/withastro/roadmap/blob/feat/live-loaders/proposals/0055-live-content-loaders.md).

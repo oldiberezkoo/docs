@@ -1,0 +1,120 @@
+---
+title: Справочник API Zod
+sidebar:
+  label: 'astro/zod'
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 6
+---
+import ReadMore from '~/components/ReadMore.astro';
+
+[Zod](https://github.com/colinhacks/zod) — это библиотека для объявления и валидации схем на основе TypeScript. Она позволяет определять схемы, которые можно использовать для валидации и трансформации данных, от простых типов (например, `string`, `number`) до сложных структур данных (например, вложенных объектов).
+
+Модуль `astro/zod` предоставляет повторный экспорт Zod, который дает доступ ко всем функциям Zod v3. Используя этот модуль, вам не нужно устанавливать Zod самостоятельно. Это также гарантирует, что ваш проект использует те же версии API, что и Astro, при использовании таких функций, как [Коллекции контента](/ru/guides/content-collections/) или [Actions](/ru/guides/actions/).
+
+<ReadMore>Смотрите [сайт Zod v3](https://v3.zod.dev/) для полной документации о том, как работает Zod и какие функции доступны.</ReadMore>
+
+## Импорт из `astro/zod`
+
+```ts
+import { z } from 'astro/zod';
+```
+
+### `z`
+
+<p>
+
+**Тип:** `object`
+</p>
+
+Утилита `z` дает доступ к валидаторам для широкого спектра типов данных, методам и типам для работы с вашими данными.
+
+<ReadMore>Узнайте больше об утилите `z` в [документации Zod](https://v3.zod.dev/?id=basic-usage)</ReadMore>
+
+#### Валидаторы общих типов данных
+
+С помощью Zod вы можете валидировать любой тип данных, такой как [примитивы](https://v3.zod.dev/?id=primitives), [объекты](https://v3.zod.dev/?id=objects), [массивы](https://v3.zod.dev/?id=arrays) и многое другое.
+
+Следующий пример показывает шпаргалку многих распространенных типов данных Zod для создания схемы `user`:
+
+```ts
+import { z } from 'astro/zod';
+
+const user = z.object({
+  username: z.string(),
+  name: z.string().min(2),
+  email: z.string().email(),
+  role: z.enum(["admin", "editor"]),
+  language: z.enum(["en", "fr", "es"]).default("en"),
+  hobbies: z.array(z.string()),
+  age: z.number(),
+  isEmailConfirmed: z.boolean(),
+  inscriptionDate: z.date(),
+  website: z.string().url().optional(),
+});
+```
+
+#### Извлечение типа Typescript
+
+Zod позволяет создать тип Typescript из любой схемы [используя вывод типов Zod](https://v3.zod.dev/?id=type-inference). Это может быть полезно для описания ожидаемой структуры данных при [определении пропсов компонента](/ru/guides/typescript/#props-компонента).
+
+Следующий пример создает тип `User` на основе предыдущей схемы:
+
+```ts
+type User = z.infer<typeof user>;
+
+/* Тип `User` будет:
+ * type User = {
+ *   username: string;
+ *   name: string;
+ *   email: string;
+ *   role: "admin" | "editor";
+ *   language: "en" | "fr" | "es";
+ *   hobbies: string[];
+ *   age: number;
+ *   isEmailConfirmed: boolean;
+ *   inscriptionDate: Date;
+ *   website?: string | undefined;
+ * }
+ */
+```
+
+#### Использование методов Zod
+
+Zod предоставляет различные [методы схемы](https://v3.zod.dev/?id=schema-methods) для настройки сообщений об ошибках, трансформации данных или создания пользовательской логики валидации.
+
+```ts
+// Настройка сообщения об ошибке
+const nonEmptyStrings = z.string().array().nonempty({
+  message: "Не может быть пустым!",
+});
+
+// Валидация данных по схеме
+nonEmptyStrings.parse([]); // выбросит нашу пользовательскую ошибку
+
+// Создание объекта из URL для декоративного изображения
+const decorativeImg = z.string().transform((value) => {
+  return { src: value, alt: "" };
+});
+
+// Создание пользовательского валидатора и сообщения об ошибке для строки
+const constrainedString = z
+  .string()
+  .refine((val) => val.length > 0 && val.length <= 255, {
+    message: "Должно быть от 1 до 255 символов.",
+  });
+```
+
+### Индивидуальный импорт
+
+В качестве альтернативы вы можете импортировать все валидаторы Zod, методы и типы, доступные в [утилите `z`](#z), непосредственно из модуля.
+
+Следующий пример импортирует `coerce` для создания объекта `Date` из строки даты:
+
+```ts
+import { coerce } from 'astro/zod';
+
+const publishedOn = coerce.date();
+const publicationDate = publishedOn.parse("2025-12-03");
+```

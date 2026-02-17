@@ -1,0 +1,68 @@
+---
+title: Динамический импорт изображений
+description: Узнайте, как динамически импортировать изображения с помощью функции Vite import.meta.glob.
+i18nReady: true
+type: recipe
+---
+import { Steps, FileTree } from '@astrojs/starlight/components';
+
+Локальные [изображения](/ru/guides/images/) должны быть импортированы в файлы `.astro` для их корректного отображения и оптимизации. Однако иногда требуется импортировать набор изображений динамически (например, на основе данных из пропсов), вместо явного импорта каждого файла вручную.
+
+В этом рецепте мы научимся использовать функцию Vite `import.meta.glob` для создания компонента карточки, который отображает фото человека по переданному пути.
+
+## Инструкция
+
+<Steps>
+1. Организуйте папку с изображениями (например, `src/assets/`).
+
+    <FileTree>
+    - src/
+      - assets/
+        - avatar-1.jpg
+        - avatar-2.png
+    </FileTree>
+
+2. Создайте новый компонент и опишите его пропсы.
+
+    ```astro title="src/components/Card.astro"
+    ---
+    import { Image } from 'astro:assets';
+    import type { ImageMetadata } from 'astro';
+
+    interface Props {
+       imagePath: string; // Путь к файлу
+       name: string;
+       altText: string;
+    }
+
+    const { imagePath, name, altText } = Astro.props;
+
+    // Получаем список всех изображений из папки assets
+    const images = import.meta.glob<{ default: ImageMetadata }>('/src/assets/*.{jpeg,jpg,png,gif}');
+
+    // Проверяем существование файла
+    if (!images[imagePath]) throw new Error(`"${imagePath}" не найден в каталоге assets.`);
+    ---
+    <div class="card">
+        <h2>{name}</h2>
+        <Image src={images[imagePath]()} alt={altText} />
+    </div>
+    ```
+
+3. Используйте компонент, передавая полный путь к изображению.
+
+    ```astro title="src/pages/index.astro"
+    ---
+    import Card from '../components/Card.astro';
+    ---
+    <Card 
+        imagePath="/src/assets/avatar-1.jpg"
+        name="Прийя"
+        altText="Фото пользователя"
+    />
+    ```
+</Steps>
+
+:::note
+Функция `import.meta.glob()` возвращает объект, где ключами являются пути к файлам, а значениями — функции для их импорта. Astro автоматически разрешает эти функции в компоненте `<Image />`.
+:::

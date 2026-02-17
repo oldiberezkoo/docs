@@ -1,0 +1,91 @@
+---
+title: Создание приложения для панели инструментов разработчика
+description: Узнайте, как создать собственное приложение для Dev Toolbar.
+type: recipe
+i18nReady: true
+---
+import { Steps, FileTree } from '@astrojs/starlight/components';
+
+Astro включает [панель инструментов разработчика](/ru/guides/dev-toolbar/), которую можно расширять с помощью собственных приложений.
+
+## Создание мотивационного приложения
+
+В этом рецепте мы создадим приложение, которое показывает случайную мотивационную фразу при активации.
+
+### Создание интеграции Astro
+
+Приложения для панели инструментов добавляются через [интеграции Astro](/ru/guides/integrations-guide/).
+
+<Steps>
+1. Создайте папку `my-toolbar-app/` в корне проекта с файлами `app.ts` и `my-integration.ts`.
+
+    <FileTree>
+    - **my-toolbar-app/**
+      - **app.ts** (логика приложения)
+      - **my-integration.ts** (код интеграции)
+    - src/
+    - astro.config.mjs
+    </FileTree>
+
+2. В `my-integration.ts` опишите хук `astro:config:setup`:
+
+    ```ts title="my-toolbar-app/my-integration.ts"
+    import { fileURLToPath } from 'node:url';
+    import type { AstroIntegration } from 'astro';
+
+    export default {
+      name: 'my-toolbar-integration',
+      hooks: {
+        'astro:config:setup': ({ addDevToolbarApp }) => {  
+          addDevToolbarApp({
+            id: "my-app",
+            name: "Мотивация",
+            icon: "🚀",
+            entrypoint: fileURLToPath(new URL('./app.ts', import.meta.url))
+          });
+        },
+      },
+    } satisfies AstroIntegration;
+    ```
+
+3. Подключите интеграцию в `astro.config.mjs`:
+
+    ```js
+    import myIntegration from './my-toolbar-app/my-integration.ts';
+
+    export default defineConfig({
+      integrations: [myIntegration],
+    });
+    ```
+</Steps>
+
+### Код приложения
+
+Приложения описываются с помощью функции `defineToolbarApp`.
+
+<Steps>
+1. В файле `my-toolbar-app/app.ts` реализуйте логику отображения текста:
+
+    ```ts title="my-toolbar-app/app.ts"
+    import { defineToolbarApp } from "astro/toolbar";
+
+    const messages = ["Всё получится!", "Ты супер!", "Продолжай в том же духе!"];
+
+    export default defineToolbarApp({
+        init(canvas, app) {
+          const h1 = document.createElement('h1');
+          h1.style.color = 'white';
+          canvas.append(h1);
+
+          // Обновляем сообщение при каждом включении приложения
+          app.onToggled(({ state }) => {
+            if (state) {
+              h1.textContent = messages[Math.floor(Math.random() * messages.length)];
+            }
+          });
+        },
+    });
+    ```
+
+2. Запустите сервер разработки и найдите иконку ракеты в панели внизу экрана. Нажмите на неё, чтобы получить заряд мотивации!
+</Steps>

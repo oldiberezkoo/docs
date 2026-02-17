@@ -1,0 +1,123 @@
+---
+title: Справочник API импорта конфигурации
+sidebar:
+  label: 'astro:config'
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 6
+---
+
+import Since from '~/components/Since.astro';
+
+<p><Since v="5.7.0" /></p>
+
+Этот виртуальный модуль `astro:config` предоставляет неполную, сериализуемую, типобезопасную версию конфигурации Astro. Существует два подмодуля для доступа к различным подмножествам значений вашей конфигурации: [`/client`](#импорт-из-astroconfigclient) и [`/server`](#импорт-из-astroconfigserver).
+
+Все доступные значения конфигурации могут быть получены из `astro:config/server`. Однако для кода, выполняемого на клиенте, будут доступны только те значения, которые открыты через `astro:config/client`. Это защищает вашу информацию, делая доступными для клиента только определенные данные.
+
+## Импорт из `astro:config/client`
+
+```js
+import {
+  i18n, 
+  trailingSlash,
+  base,
+  build,
+  site,
+  compressHTML,
+} from "astro:config/client";
+```
+
+Используйте этот подмодуль для клиентского кода:
+
+```js title="src/utils.js" ins={1} ins="trailingSlash"
+import { trailingSlash } from "astro:config/client";
+
+function addForwardSlash(path) {
+  if (trailingSlash === "always") {
+    return path.endsWith("/") ? path : path + "/"
+  } else {
+    return path
+  }
+}
+```
+
+Узнайте больше об импорте конфигурации, доступном из `astro:config/client`:
+
+- [`i18n`](/ru/reference/configuration-reference/#i18n)
+- [`trailingSlash`](/ru/reference/configuration-reference/#trailingslash)
+- [`base`](/ru/reference/configuration-reference/#base)
+- [`build.format`](/ru/reference/configuration-reference/#buildformat)
+- [`site`](/ru/reference/configuration-reference/#site)
+- [`compressHTML`](/ru/reference/configuration-reference/#compresshtml)
+
+
+
+## Импорт из `astro:config/server`
+
+```js
+import {
+  i18n, 
+  trailingSlash,
+  base,
+  build,
+  site,
+  srcDir,
+  cacheDir,
+  outDir,
+  publicDir,
+  root,
+  compressHTML,
+} from "astro:config/server";
+```
+
+Этот импорт включает все, что доступно из `astro:config/client`, а также дополнительную конфиденциальную информацию о конфигурации вашей файловой системы, которую небезопасно раскрывать клиенту.
+
+Используйте этот подмодуль для серверного кода:
+
+```js title="astro.config.mjs"
+import { integration } from "./integration.mjs";
+
+export default defineConfig({
+    integrations: [
+      integration(),
+    ]
+});
+```
+
+```js title="integration.mjs" ins={1} ins="outDir"
+import { outDir } from "astro:config/server";
+import { writeFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+export default function() {
+  return {
+    name: "internal-integration",
+    hooks: {
+      "astro:build:done": () => {
+        let file = new URL("result.json", outDir);
+        // генерируем данные из какой-либо операции
+        let data = JSON.stringify([]);
+        writeFileSync(fileURLToPath(file), data, "utf-8");
+      }
+    }
+  }
+}
+```
+
+Узнайте больше об импорте конфигурации, доступном из `astro:config/server`:
+
+- [`i18n`](/ru/reference/configuration-reference/#i18n)
+- [`trailingSlash`](/ru/reference/configuration-reference/#trailingslash)
+- [`base`](/ru/reference/configuration-reference/#base)
+- [`build.format`](/ru/reference/configuration-reference/#buildformat)
+- [`build.client`](/ru/reference/configuration-reference/#buildclient)
+- [`build.server`](/ru/reference/configuration-reference/#buildserver)
+- [`site`](/ru/reference/configuration-reference/#site)
+- [`srcDir`](/ru/reference/configuration-reference/#srcdir)
+- [`cacheDir`](/ru/reference/configuration-reference/#cachedir)
+- [`outDir`](/ru/reference/configuration-reference/#outdir)
+- [`publicDir`](/ru/reference/configuration-reference/#publicdir)
+- [`root`](/ru/reference/configuration-reference/#root)
+- [`compressHTML`](/ru/reference/configuration-reference/#compresshtml)

@@ -1,97 +1,167 @@
 ---
 title: Настройка редактора
-description: Настройте ваш редактор для работы с Astro.
+description: Настройте редактор кода для работы с Astro.
 i18nReady: true
 ---
+
 import PackageManagerTabs from '~/components/tabs/PackageManagerTabs.astro'
+import { Steps } from '@astrojs/starlight/components';
 import Badge from "~/components/Badge.astro"
 
-Настройте ваш редактор, чтобы улучшить опыт разработки и разблокировать новые функции Astro.
+Настройте редактор кода, чтобы улучшить процесс разработки на Astro и разблокировать новые функции.
 
 ## VS Code
 
-[VS Code](https://code.visualstudio.com/) - популярный редактор кода для веб-разработчиков, созданный Microsoft. Движок VS Code также обеспечивает работу популярных внутрибраузерных редакторов кода, таких как [GitHub Codespaces](https://github.com/features/codespaces) и [Gitpod](https://gitpod.io/).
+[VS Code](https://code.visualstudio.com/) — популярный редактор кода для веб-разработчиков, созданный Microsoft. Движок VS Code также используется в популярных онлайн-редакторах кода, таких как [GitHub Codespaces](https://github.com/features/codespaces).
 
-Astro работает с любым редактором кода. Однако VS Code является нашим рекомендуемым редактором для Astro проектов. Мы поддерживаем официальное [расширение Astro VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode), которое открывает несколько ключевых функций и улучшает работу разработчиков в проектах Astro.
+Astro работает с любым редактором кода. Однако VS Code является рекомендуемым редактором для проектов Astro. Мы поддерживаем официальное [расширение Astro для VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode), которое открывает несколько ключевых функций и улучшает опыт разработки проектов на Astro.
 
-- Подсветка синтаксиса для файлов с расширением `.astro`.
-- Информация о типах TypeScript для файлов с расширением `.astro`.
-- [VS Code Intellisense](https://code.visualstudio.com/docs/editor/intellisense) для автозавершения кода, подсказок и многого другого.
+- Подсветка синтаксиса для файлов `.astro`.
+- Информация о типах TypeScript для файлов `.astro`.
+- [VS Code Intellisense](https://code.visualstudio.com/docs/editor/intellisense) для автодополнения кода, подсказок и многого другого.
 
-Для начала раьботы установите [расширение Astro VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode).
+Чтобы начать, установите [расширение Astro для VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode) уже сегодня.
 
 import ReadMore from '~/components/ReadMore.astro';
 
-<ReadMore>Посмотрите, как [настроить TypeScript](/ru/guides/typescript/) в вашем проекте Astro.</ReadMore>
+<ReadMore>Узнайте, как [настроить TypeScript](/ru/guides/typescript/) в вашем проекте Astro.</ReadMore>
 
-## IDE JetBrains
+## Zed
 
-Поддержка Astro была добавлена в WebStorm 2023.1. Вы можете установить официальный плагин через [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/20959-astro) или выполнив поиск "Astro" во вкладке Плагины IDE. Этот плагин включает функции, такие как подсветка синтаксиса, автозавершение кода и форматирование, а также планирует добавить еще более продвинутые возможности в будущем. Он также доступен для всех других [IDE JetBrains с поддержкой JavaScript](https://www.jetbrains.com/products/#lang=js&type=ide).
+[Zed](https://zed.dev/) — это высокопроизводительный многопользовательский редактор кода, оптимизированный для скорости и больших проектов. Их [расширение Astro](https://zed.dev/extensions/astro) включает такие функции, как подсветка синтаксиса для файлов `.astro`, автодополнение кода, форматирование, диагностика и переход к определению.
 
+## JetBrains IDEs
+
+[Webstorm](https://www.jetbrains.com/webstorm/) — это IDE для JavaScript и TypeScript, в которую была добавлена поддержка Astro Language Server в версии 2024.2. Это обновление принесло такие функции, как подсветка синтаксиса, автодополнение кода и форматирование.
+
+Установите официальный плагин через [JetBrains Marketplace](https://plugins.jetbrains.com/plugin/20959-astro) или выполнив поиск по запросу «Astro» на вкладке Plugins (Плагины) в IDE. Вы можете переключить языковой сервер в `Settings | Languages & Frameworks | TypeScript | Astro`.
+
+Для получения дополнительной информации о поддержке Astro в Webstorm ознакомьтесь с [официальной документацией Webstorm по Astro](https://www.jetbrains.com/help/webstorm/astro.html).
 
 ## Другие редакторы кода
 
-Наше потрясающее сообщество поддерживает несколько расширений для других популярных редакторов, включая:
+Наше замечательное сообщество поддерживает несколько расширений для других популярных редакторов, включая:
 
-- [Расширение VS Code на Open VSX](https://open-vsx.org/extension/astro-build/astro-vscode) <span style="margin: 0.25em;"><Badge text="Официальное" /></span> - Официальное расширение Astro VS Code, доступное в реестре Open VSX для открытых платформ, таких как [VSCodium](https://vscodium.com/)
-- [Расширение Nova](https://extensions.panic.com/extensions/sciencefidelity/sciencefidelity.astro/) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> - Предоставляет подсветку синтаксиса и автозавершение кода для Astro в Nova
-- [Плагин Vim](https://github.com/wuelnerdotexe/vim-astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> - Предоставляет подсветку синтаксиса, выравнивание и поддержку сворачивания кода для Astro в Vim или Neovim
-- Плагины Neovim [LSP](https://github.com/neovim/nvim-lspconfig/blob/master/doc/server_configurations.md#astro) и [TreeSitter](https://github.com/virchau13/tree-sitter-astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> - Предоставляют подсветку синтаксиса, парсинг синтаксического дерева, и автозавершение кода для Astro в Neovim
-- Emacs - См. инструкции по [настройке Emacs и Eglot](https://medium.com/@jrmjrm/configuring-emacs-and-eglot-to-work-with-astro-language-server-9408eb709ab0) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> для работы с Astro
-- [Подсветка синтаксиса Astro для Sublime Text](https://packagecontrol.io/packages/Astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> - Пакет Astro для Sublime Text, доступный в менеджере пакетов Sublime Text.
+- [Расширение VS Code на Open VSX](https://open-vsx.org/extension/astro-build/astro-vscode) <span style="margin: 0.25em;"><Badge text="Официально" /></span> — Официальное расширение Astro для VS Code, доступное в реестре Open VSX для таких редакторов, как [Cursor](https://cursor.com) или [VSCodium](https://vscodium.com/).
+- [Плагин для Vim](https://github.com/wuelnerdotexe/vim-astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> — Обеспечивает подсветку синтаксиса, отступы и сворачивание кода для Astro в Vim или Neovim.
+- Плагины Neovim [LSP](https://github.com/neovim/nvim-lspconfig/blob/master/doc/configs.md#astro) и [TreeSitter](https://github.com/virchau13/tree-sitter-astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> — Обеспечивают подсветку синтаксиса, парсинг treesitter и автодополнение кода для Astro в Neovim.
+- Emacs — См. инструкции по [настройке Emacs и Eglot](https://medium.com/@jrmjrm/configuring-emacs-and-eglot-to-work-with-astro-language-server-9408eb709ab0) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> для работы с Astro.
+- [Подсветка синтаксиса Astro для Sublime Text](https://packagecontrol.io/packages/Astro) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> — Пакет Astro для Sublime Text, доступный в менеджере пакетов Sublime Text.
+- [Расширение Nova](https://extensions.panic.com/extensions/sciencefidelity/sciencefidelity.astro/) <span style="margin: 0.25em;"><Badge class="neutral-badge" text="Сообщество" /></span> — Обеспечивает подсветку синтаксиса и автодополнение кода для Astro в Nova.
 
-## Редакторы в браузере
+## Онлайн-редакторы
 
-Помимо локальных редакторов, Astro также хорошо работает в редакторах, запущенных в браузере, включая:
+Помимо локальных редакторов, Astro также хорошо работает в онлайн-редакторах, включая:
 
-- [StackBlitz](https://stackblitz.com/) и [CodeSandbox](https://codesandbox.io/) - онлайн-редакторы которые запускаются в вашем браузере, со встроенной поддержкой подсветки синтаксиса для `.astro` файлов. Установка или настройка не требуется!
-- [GitHub.dev](https://github.dev/) - позволяет вам установить расширение Astro VS Code как [веб-расширение](https://code.visualstudio.com/api/extension-guides/web-extensions), что дает доступ только к некоторым функциям полного расширения. В настоящее время поддерживается только подсветка синтаксиса.
-- [Gitpod](https://gitpod.io/) - полноценная среда разработки в облаке, которая может установить официальное расширение Astro VS Code от Open VSX.
+- [StackBlitz](https://stackblitz.com/) и [CodeSandbox](https://codesandbox.io/) — онлайн-редакторы, которые работают в браузере и имеют встроенную поддержку подсветки синтаксиса для файлов `.astro`. Установка или настройка не требуются!
+- [GitHub.dev](https://github.dev/) — позволяет установить расширение Astro для VS Code как [веб-расширение](https://code.visualstudio.com/api/extension-guides/web-extensions), что дает доступ только к части функций полного расширения. В настоящее время поддерживается только подсветка синтаксиса.
+- [Firebase Studio](https://firebase.studio/) — полноценная среда разработки в облаке, которая может установить официальное расширение Astro для VS Code из Open VSX.
 
 ## Другие инструменты
 
 ### ESLint
 
-[ESLint](https://eslint.org/) - популярный линтер для JavaScript и JSX. Для поддержки Astro можно установить [плагин, поддерживаемый сообществом](https://github.com/ota-meshi/eslint-plugin-astro).
+[ESLint](https://eslint.org/) — популярный линтер для JavaScript и JSX. Для поддержки Astro можно установить [плагин, поддерживаемый сообществом](https://github.com/ota-meshi/eslint-plugin-astro).
 
 См. [руководство пользователя проекта](https://ota-meshi.github.io/eslint-plugin-astro/user-guide/) для получения дополнительной информации о том, как установить и настроить ESLint для вашего проекта.
 
 ### Stylelint
 
-[Stylelint](https://stylelint.io/) - популярный линтер для CSS. [Конфигурация Stylelint, поддерживаемая сообществом](https://github.com/ota-meshi/stylelint-config-html), предоставляет поддержку Astro.
+[Stylelint](https://stylelint.io/) — популярный линтер для CSS. [Конфигурация Stylelint, поддерживаемая сообществом](https://github.com/ota-meshi/stylelint-config-html), обеспечивает поддержку Astro.
 
-Инструкции по установке, интеграции с редактором и дополнительная информация можно найти в README проекта.
+Инструкции по установке, интеграции с редактором и дополнительную информацию можно найти в README проекта.
+
+### Biome
+
+[Biome](https://biomejs.dev/) — это универсальный линтер и форматер для веба. [Biome в настоящее время имеет экспериментальную поддержку файлов `.astro`](https://biomejs.dev/internals/language-support/#html-super-languages-support) и может использоваться для линтинга и форматирования метаданных (frontmatter) в файлах `.astro`.
 
 ### Prettier
 
-[Prettier](https://prettier.io/) - популярный форматтер для JavaScript, HTML, CSS и многого другого. Если вы используете [расширение Astro VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode) или [сервер языка Astro в другом редакторе](#другие-редакторы-кода), поддержка форматирования кода с использованием Prettier включена.
+[Prettier](https://prettier.io/) — популярный инструмент форматирования для JavaScript, HTML, CSS и других языков. Если вы используете [расширение Astro для VS Code](https://marketplace.visualstudio.com/items?itemName=astro-build.astro-vscode), форматирование кода с помощью Prettier уже включено.
 
-Чтобы добавить поддержку форматирования файлов `.astro` вне редактора (например, через CLI) или в редакторах, которые не поддерживают наши инструменты редактирования, установите [официальный плагин Prettier для Astro](https://github.com/withastro/prettier-plugin-astro).
+Чтобы добавить поддержку форматирования файлов `.astro` вне редактора (например, через CLI) или в редакторах, которые не поддерживают наши инструменты, установите [официальный плагин Astro для Prettier](https://github.com/withastro/prettier-plugin-astro).
 
-Чтобы начать, сначала установите Prettier и плагин:
+<Steps>
+1. Установите `prettier` и `prettier-plugin-astro`.
 
-<PackageManagerTabs>
-  <Fragment slot="npm">
-  ```shell
-  npm install --save-dev prettier prettier-plugin-astro
-  ```
-  </Fragment>
-  <Fragment slot="pnpm">
-  ```shell
-  pnpm add -D prettier prettier-plugin-astro
-  ```
-  </Fragment>
-  <Fragment slot="yarn">
-  ```shell
-  yarn add --dev prettier prettier-plugin-astro
-  ```
-  </Fragment>
-</PackageManagerTabs>
+    <PackageManagerTabs>
+      <Fragment slot="npm">
+      ```shell
+      npm install --save-dev --save-exact prettier prettier-plugin-astro
+      ```
+      </Fragment>
+      <Fragment slot="pnpm">
+      ```shell
+      pnpm add --save-dev --save-exact prettier prettier-plugin-astro
+      ```
+      </Fragment>
+      <Fragment slot="yarn">
+      ```shell
+      yarn add --dev --exact prettier prettier-plugin-astro
+      ```
+      </Fragment>
+    </PackageManagerTabs>
 
-Prettier автоматически обнаружит плагин и будет использовать его для обработки файлов .astro при запуске:
+2. Создайте файл конфигурации `.prettierrc` (или `.prettierrc.json`, `.prettierrc.mjs`, или [другие поддерживаемые форматы](https://prettier.io/docs/configuration)) в корне вашего проекта и добавьте в него `prettier-plugin-astro`.
 
-```shell
-prettier --write .
-```
+    В этом файле также вручную укажите парсер для файлов Astro.
 
-Для получения дополнительной информации о поддерживаемых параметрах плагина, о том, как настроить Prettier внутри VS Code и многое другое, см. [README плагина Prettier](https://github.com/withastro/prettier-plugin-astro/blob/main/README.md).
+    ```json title=".prettierrc"
+    {
+      "plugins": ["prettier-plugin-astro"],
+      "overrides": [
+        {
+          "files": "*.astro",
+          "options": {
+            "parser": "astro"
+          }
+        }
+      ]
+    }
+    ```
+
+3. Опционально установите другие плагины Prettier для вашего проекта и добавьте их в файл конфигурации. Эти дополнительные плагины, возможно, потребуется перечислить в определенном порядке. Например, если вы используете Tailwind, `prettier-plugin-tailwindcss` должен быть [последним плагином Prettier в массиве плагинов](https://github.com/tailwindlabs/prettier-plugin-tailwindcss#compatibility-with-other-prettier-plugins).
+
+    ```json title=".prettierrc"
+    {
+      "plugins": [
+        "prettier-plugin-astro",
+        "prettier-plugin-tailwindcss" // должен быть последним
+      ],
+      "overrides": [
+        {
+          "files": "*.astro",
+          "options": {
+            "parser": "astro"
+          }
+        }
+      ]
+    }
+    ```
+
+4. Запустите следующую команду в терминале, чтобы отформатировать файлы.
+
+    <PackageManagerTabs>
+      <Fragment slot="npm">
+      ```shell
+      npx prettier . --write
+      ```
+      </Fragment>
+      <Fragment slot="pnpm">
+      ```shell
+      pnpm exec prettier . --write
+      ```
+      </Fragment>
+      <Fragment slot="yarn">
+      ```shell
+      yarn exec prettier . --write
+      ```
+      </Fragment>
+    </PackageManagerTabs>
+</Steps>
+
+См. [README плагина Prettier](https://github.com/withastro/prettier-plugin-astro/blob/main/README.md) для получения дополнительной информации о поддерживаемых параметрах, настройке Prettier в VS Code и многом другом.
+
+### dprint
+
+[dprint](https://dprint.dev/) — это легко настраиваемый форматер кода, поддерживающий множество языков, включая JavaScript, TypeScript, CSS и другие. Поддержку файлов `.astro` можно добавить с помощью [плагина markup_fmt](https://github.com/g-plane/markup_fmt).

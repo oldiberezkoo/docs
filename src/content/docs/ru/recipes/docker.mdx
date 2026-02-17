@@ -1,0 +1,73 @@
+---
+title: Сборка сайта Astro с помощью Docker
+description: Узнайте, как собрать и запустить ваш сайт на Astro в контейнере Docker.
+type: recipe
+i18nReady: true
+---
+import { Steps } from '@astrojs/starlight/components';
+
+[Docker](https://docker.com) — это инструмент для сборки, развертывания и запуска приложений в изолированных контейнерах.
+
+Контейнеры Docker можно запускать на множестве платформ, таких как AWS, Azure или [Google Cloud](/ru/guides/deploy/google-cloud/).
+
+## Предварительные требования
+
+- Установленный Docker на локальной машине.
+- Файл `Dockerfile` в корне вашего проекта.
+
+## Создание Dockerfile
+
+Создайте файл `Dockerfile` в корневом каталоге. Инструкции будут зависеть от того, используете ли вы статический сайт или SSR.
+
+### Режим SSR
+
+Этот пример собирает сайт и запускает его на Node.js (порт `4321`). Требуется установленный [адаптер Node.js](/ru/guides/integrations-guide/node/).
+
+```docker title="Dockerfile"
+FROM node:lts AS runtime
+WORKDIR /app
+
+COPY . .
+
+RUN npm install
+RUN npm run build
+
+ENV HOST=0.0.0.0
+ENV PORT=4321
+EXPOSE 4321
+CMD ["node", "./dist/server/entry.mjs"]
+```
+
+### Статический режим (NGINX)
+
+Для статических сайтов удобно использовать веб-сервер NGINX.
+
+```docker title="Dockerfile"
+FROM node:lts AS build
+WORKDIR /app
+COPY . .
+RUN npm install
+RUN npm run build
+
+FROM nginx:alpine AS runtime
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+```
+
+## Инструкция
+
+<Steps>
+1. Соберите образ командой:
+
+    ```bash
+    docker build -t my-astro-site .
+    ```
+
+2. Запустите контейнер локально для проверки:
+
+    ```bash
+    docker run -p 8080:80 my-astro-site
+    ```
+
+    Ваш сайт станет доступен по адресу `http://localhost:8080`.
+</Steps>

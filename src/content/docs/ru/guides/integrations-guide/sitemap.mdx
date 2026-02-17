@@ -1,0 +1,610 @@
+---
+type: integration
+title: '@astrojs/sitemap'
+description: Узнайте, как использовать интеграцию @astrojs/sitemap в вашем проекте Astro.
+sidebar:
+  label: Sitemap
+githubIntegrationURL: 'https://github.com/withastro/astro/tree/main/packages/integrations/sitemap/'
+category: other
+i18nReady: true
+---
+import PackageManagerTabs from '~/components/tabs/PackageManagerTabs.astro';
+import Since from '~/components/Since.astro';
+
+Эта **[интеграция Astro][astro-integration]** генерирует sitemap на основе ваших страниц при сборке проекта Astro.
+
+## Зачем Astro Sitemap
+
+Sitemap - это XML-файл, который описывает все страницы, видео и файлы на вашем сайте. Поисковые системы, такие как Google, читают этот файл, чтобы эффективнее обходить сайт. Подробнее см. [рекомендации Google по sitemap](https://developers.google.com/search/docs/advanced/sitemaps/overview).
+
+Файл sitemap рекомендуется для больших многостраничных сайтов. Даже без sitemap большинство поисковых систем смогут проиндексировать страницы, но sitemap - хороший способ повысить "дружелюбность" сайта для поисковых роботов.
+
+С Astro Sitemap вам не нужно создавать этот XML вручную: интеграция обойдет ваши статически сгенерированные маршруты и создаст sitemap-файл, включая [динамические маршруты](/ru/guides/routing/) вида `[...slug]` или `src/pages/[lang]/[version]/info.astro`, генерируемые через `getStaticPaths()`.
+
+Эта интеграция не может генерировать записи sitemap для динамических маршрутов в режиме [SSR](/ru/guides/on-demand-rendering/).
+
+## Установка
+
+Astro включает команду `astro add` для автоматической настройки официальных интеграций. Если вы предпочитаете, вы можете [установить интеграции вручную](#ручная-установка).
+
+Запустите одну из следующих команд в новом окне терминала.
+
+<PackageManagerTabs>
+  <Fragment slot="npm">
+  ```sh
+  npx astro add sitemap
+  ```
+  </Fragment>
+  <Fragment slot="pnpm">
+  ```sh
+  pnpm astro add sitemap
+  ```
+  </Fragment>
+  <Fragment slot="yarn">
+  ```sh
+  yarn astro add sitemap
+  ```
+  </Fragment>
+</PackageManagerTabs>
+
+Если у вас возникнут какие-либо проблемы, [не стесняйтесь сообщать нам о них на GitHub](https://github.com/withastro/astro/issues) и попробуйте выполнить шаги ручной установки ниже.
+
+### Ручная установка
+
+Сначала установите пакет `@astrojs/sitemap` с помощью вашего менеджера пакетов.
+
+<PackageManagerTabs>
+  <Fragment slot="npm">
+  ```sh
+  npm install @astrojs/sitemap
+  ```
+  </Fragment>
+  <Fragment slot="pnpm">
+  ```sh
+  pnpm add @astrojs/sitemap
+  ```
+  </Fragment>
+  <Fragment slot="yarn">
+  ```sh
+  yarn add @astrojs/sitemap
+  ```
+  </Fragment>
+</PackageManagerTabs>
+
+Затем примените интеграцию к вашему файлу `astro.config.*`, используя свойство `integrations`:
+
+```js ins={2} ins="sitemap()"
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  // ...
+  integrations: [sitemap()],
+});
+```
+
+## Использование
+
+`@astrojs/sitemap` нужно знать публичный URL вашего сайта, чтобы сгенерировать sitemap.
+
+Добавьте URL сайта в опцию [`site`](/ru/reference/configuration-reference/#site) в `astro.config.mjs`. Значение должно начинаться с `http://` или `https://`.
+
+```js title="astro.config.mjs" {5}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [sitemap()],
+  // ...
+});
+```
+
+Когда интеграция sitemap настроена, в выходной директории сборки появятся файлы `sitemap-index.xml` и `sitemap-0.xml`.
+
+`sitemap-index.xml` содержит ссылки на все пронумерованные sitemap-файлы.
+`sitemap-0.xml` содержит список страниц сайта.
+Для очень больших сайтов могут появиться дополнительные файлы, например `sitemap-1.xml` и `sitemap-2.xml`.
+
+<details>
+<summary>Пример сгенерированных файлов для сайта из двух страниц</summary>
+
+```xml title="sitemap-index.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+  <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <sitemap>
+    <loc>https://example.com/sitemap-0.xml</loc>
+  </sitemap>
+</sitemapindex>
+```
+
+```xml title="sitemap-0.xml"
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:news="http://www.google.com/schemas/sitemap-news/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1" xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://example.com/</loc>
+  </url>
+  <url>
+    <loc>https://example.com/second-page/</loc>
+  </url>
+</urlset>
+```
+</details>
+
+### Обнаружение sitemap (discovery)
+
+Вы можете упростить для роботов поиск sitemap, добавив ссылки в `<head>` и в `robots.txt`.
+
+#### Ссылка на sitemap в `<head>`
+
+Добавьте элемент `<link rel="sitemap">` в `<head>`, указав индексный файл sitemap:
+
+```html title="src/layouts/Layout.astro" ins={2}
+<head>
+  <link rel="sitemap" href="/sitemap-index.xml" />
+</head>
+```
+
+#### Ссылка на sitemap в `robots.txt`
+
+Если у вас есть `robots.txt`, вы можете добавить URL sitemap index, чтобы помочь роботам:
+
+```txt ins={5}
+# public/robots.txt
+User-agent: *
+Allow: /
+
+Sitemap: https://<YOUR SITE>/sitemap-index.xml
+```
+
+Если вы хотите переиспользовать значение `site` из `astro.config.mjs`, вы также можете сгенерировать `robots.txt` динамически.
+Вместо статического файла в `public/` создайте `src/pages/robots.txt.ts` и добавьте следующий код:
+
+```ts title="src/pages/robots.txt.ts"
+import type { APIRoute } from 'astro';
+
+const getRobotsTxt = (sitemapURL: URL) => `\
+User-agent: *
+Allow: /
+
+Sitemap: ${sitemapURL.href}
+`;
+
+export const GET: APIRoute = ({ site }) => {
+  const sitemapURL = new URL('sitemap-index.xml', site);
+  return new Response(getRobotsTxt(sitemapURL));
+};
+```
+
+## Конфигурация
+
+Чтобы настроить интеграцию, передайте объект в `sitemap()` в `astro.config.mjs`.
+
+```js title="astro.config.mjs" {6-8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  integrations: [
+    sitemap({
+      // configuration options
+    }),
+  ],
+});
+```
+
+### `filter`
+
+<p>
+
+**Тип:** `(page: string) => boolean`
+</p>
+
+По умолчанию все страницы включаются в sitemap. Добавив собственную функцию `filter`, вы можете фильтровать страницы по URL.
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      filter: (page) => page !== 'https://example.com/secret-vip-lounge/',
+    }),
+  ],
+});
+```
+
+Функция будет вызвана для каждой страницы сайта. Параметр `page` - это полный URL рассматриваемой страницы, включая домен из `site`. Верните `true`, чтобы включить страницу в sitemap, и `false`, чтобы исключить.
+
+Чтобы отфильтровать несколько страниц, добавьте дополнительные условия.
+
+```js title="astro.config.mjs" {8-12}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      filter: (page) =>
+        page !== 'https://example.com/secret-vip-lounge-1/' &&
+        page !== 'https://example.com/secret-vip-lounge-2/' &&
+        page !== 'https://example.com/secret-vip-lounge-3/' &&
+        page !== 'https://example.com/secret-vip-lounge-4/',
+    }),
+  ],
+});
+```
+
+### `customPages`
+
+<p>
+
+**Тип:** `string[]`
+</p>
+
+Массив внешне сгенерированных страниц, которые нужно включить в sitemap.
+
+Используйте эту опцию, чтобы добавить в sitemap страницы, которые присутствуют на вашем сайте, но не создаются Astro.
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      customPages: ['https://example.com/external-page1', 'https://example.com/external-page2'],
+    }),
+  ],
+});
+```
+
+### `customSitemaps`
+
+<p>
+
+**Тип:** `string[]`<br />
+**По умолчанию:** `[]`<br />
+<Since v="3.5.0" pkg="@astrojs/sitemap" />
+</p>
+
+Массив внешне сгенерированных sitemap-файлов, которые нужно добавить в `sitemap-index.xml` вместе со сгенерированными интеграцией записями.
+
+Используйте эту опцию, чтобы включить внешние sitemap в `sitemap-index.xml`, созданный Astro, для разделов сайта, у которых есть собственные sitemap, не генерируемые Astro. Это удобно, например, когда под одним доменом размещено несколько сервисов.
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      customSitemaps: ['https://example.com/blog/sitemap.xml', 'https://example.com/shop/sitemap.xml'],
+    }),
+  ],
+});
+```
+
+### `entryLimit`
+
+<p>
+
+**Тип:** `number`<br />
+**По умолчанию:** `45000`
+</p>
+
+Максимальное число записей на один sitemap-файл. По умолчанию 45000. Если записей больше, будет создан индексный файл и несколько sitemap. См. [объяснение, как разбивать большой sitemap](https://developers.google.com/search/docs/advanced/sitemaps/large-sitemaps).
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      entryLimit: 10000,
+    }),
+  ],
+});
+```
+
+### `changefreq`, `lastmod` и `priority`
+
+<p>
+
+**Тип:** `{ changefreq?: ChangeFreq; lastmod?: Date; priority?: number; }`
+<Since v="0.2.0" pkg="@astrojs/sitemap" />
+</p>
+
+Эти опции соответствуют тегам `<changefreq>`, `<lastmod>` и `<priority>` в [спецификации Sitemap XML](https://www.sitemaps.org/protocol.html).
+
+Обратите внимание: Google игнорирует `changefreq` и `priority`.
+
+:::note
+Из-за ограничений [API интеграций Astro](/ru/reference/integrations-reference/), эта интеграция не может анализировать исходный код страниц. Эта опция задает `changefreq`, `lastmod` и `priority` *для всего сайта*; см. следующую опцию **serialize**, чтобы задать эти значения для каждой страницы отдельно.
+:::
+
+```js title="astro.config.mjs" ins={8-10}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      changefreq: 'weekly',
+      priority: 0.7,
+      lastmod: new Date('2022-02-24'),
+    }),
+  ],
+});
+```
+
+### `serialize`
+
+<p>
+
+**Тип:** `(item: SitemapItem) => SitemapItem | Promise<SitemapItem | undefined> | undefined`
+</p>
+
+Функция, которая вызывается для каждой записи sitemap непосредственно перед записью на диск. Может быть асинхронной.
+
+Она получает параметр `SitemapItem` со следующими свойствами:
+
+* `url` (абсолютный URL страницы). Это единственное гарантированное свойство `SitemapItem`.
+* `changefreq`
+* `lastmod` (дата в ISO-формате, тип `String`)
+* `priority`
+* `links`.
+
+Свойство `links` содержит список альтернативных страниц `LinkItem`, включая "родительскую" страницу.
+
+Тип `LinkItem` имеет два поля: `url` (полный URL версии этой страницы для указанного языка) и `lang` (код языка).
+
+Функция `serialize` должна вернуть `SitemapItem` (измененный или нет).
+
+Пример ниже показывает, как добавлять sitemap-специфичные свойства индивидуально:
+
+```js title="astro.config.mjs" ins={8-18}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      serialize(item) {
+        if (/exclude-from-sitemap/.test(item.url)) {
+          return undefined;
+        }
+        if (/your-special-page/.test(item.url)) {
+          item.changefreq = 'daily';
+          item.lastmod = new Date();
+          item.priority = 0.9;
+        }
+        return item;
+      },
+    }),
+  ],
+});
+```
+
+### `chunks`
+
+<p>
+
+**Тип:** `Record<string, (item: SitemapItem) => SitemapItem | undefined>`
+<Since v="3.7.0" pkg="@astrojs/sitemap" />
+</p>
+
+Карта функций, которая позволяет разбивать sitemap на несколько файлов по собственной логике. Каждый ключ объекта становится именем отдельного sitemap-файла, а соответствующая функция определяет, какие URL попадут в этот "чанк". Это может быть полезно, например, если конкретный раздел сайта часто меняется, и вы хотите задать другую частоту изменений для его записей.
+
+Каждая функция чанка получает `SitemapItem` и для каждого item возвращает:
+* измененный `SitemapItem`, если URL нужно включить в этот чанк
+* `undefined`, если URL не должен быть включен в этот чанк
+
+Пример ниже показывает, как разделить URL по их пути:
+
+```js title="astro.config.mjs" ins={8-25}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      chunks: {
+        'blog': (item) => {
+          if (/blog/.test(item.url)) {
+            item.changefreq = 'weekly';
+            item.lastmod = new Date();
+            item.priority = 0.9;
+            return item;
+          }
+        },
+        'glossary': (item) => {
+          if (/glossary/.test(item.url)) {
+            item.changefreq = 'monthly';
+            item.lastmod = new Date();
+            item.priority = 0.7;
+            return item;
+          }
+        }
+      },
+    }),
+  ],
+});
+```
+
+Эта конфигурация сгенерирует файлы:
+
+- `sitemap-blog-0.xml`
+- `sitemap-glossary-0.xml`
+
+URL, которые не совпадут ни с одним чанком, попадут в файл по умолчанию `sitemap-pages-0.xml`.
+
+### `i18n`
+
+<p>
+
+**Тип:** `{ defaultLocale: string; locales: Record<string, string>; }`
+</p>
+
+Чтобы [локализовать sitemap](https://developers.google.com/search/docs/advanced/crawling/localized-versions#all-method-guidelines), передайте объект в опцию `i18n`.
+
+Этот объект имеет два обязательных свойства:
+
+* `defaultLocale`: его значение должно присутствовать среди ключей `locales`.
+* `locales`: пары ключ/значение. Ключ используется для поиска части locale в пути страницы. Значение - это [атрибут языка](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/lang) (допускаются только латинские буквы и дефис).
+
+```js title="astro.config.mjs" ins={8-15}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      i18n: {
+        defaultLocale: 'en', // Все URL, которые не содержат `es` или `fr` после `https://example.com/`, будут считаться локалью по умолчанию, т.е. `en`
+        locales: {
+          en: 'en-US', // Значение `defaultLocale` должно присутствовать среди ключей `locales`
+          es: 'es-ES',
+          fr: 'fr-CA',
+        },
+      },
+    }),
+  ],
+});
+```
+
+Результирующий sitemap выглядит так:
+
+```xml title="sitemap-0.xml"
+...
+  <url>
+    <loc>https://example.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://example.com/"/>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://example.com/es/"/>
+    <xhtml:link rel="alternate" hreflang="fr-CA" href="https://example.com/fr/"/>
+  </url>
+  <url>
+    <loc>https://example.com/es/</loc>
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://example.com/"/>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://example.com/es/"/>
+    <xhtml:link rel="alternate" hreflang="fr-CA" href="https://example.com/fr/"/>
+  </url>
+  <url>
+    <loc>https://example.com/fr/</loc>
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://example.com/"/>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://example.com/es/"/>
+    <xhtml:link rel="alternate" hreflang="fr-CA" href="https://example.com/fr/"/>
+  </url>
+  <url>
+    <loc>https://example.com/es/second-page/</loc>
+    <xhtml:link rel="alternate" hreflang="es-ES" href="https://example.com/es/second-page/"/>
+    <xhtml:link rel="alternate" hreflang="fr-CA" href="https://example.com/fr/second-page/"/>
+    <xhtml:link rel="alternate" hreflang="en-US" href="https://example.com/second-page/"/>
+  </url>
+...
+```
+
+### `xslURL`
+
+<p>
+
+**Тип:** `string`<br />
+<Since v="3.2.0" pkg="@astrojs/sitemap" />
+</p>
+
+URL XSL-таблицы стилей для оформления и "причесывания" sitemap.
+
+Значение может быть либо путем относительно настроенного `site` для локальной таблицы стилей, либо абсолютной ссылкой на внешнюю таблицу стилей.
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      xslURL: '/sitemap.xsl'
+    }),
+  ],
+});
+```
+
+### `filenameBase`
+
+<p>
+
+**Тип:** `string`<br />
+**По умолчанию:** `sitemap`<br />
+<Since v="3.4.0" pkg="@astrojs/sitemap" />
+</p>
+
+Префикс имени, используемый при генерации XML sitemap-файлов. По умолчанию `sitemap`.
+
+Это может быть полезно при интеграции сайта Astro в домен, где уже существуют sitemap-файлы.
+
+```js title="astro.config.mjs" ins={8}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      filenameBase: 'astronomy-sitemap'
+    }),
+  ],
+});
+```
+
+Эта конфигурация сгенерирует sitemap-файлы по адресам `https://example.com/astronomy-sitemap-0.xml` и `https://example.com/astronomy-sitemap-index.xml`.
+
+### `namespaces`
+
+<p>
+
+**Тип:** `{ news?: boolean; xhtml?: boolean; image?: boolean; video?: boolean; }` <br />
+**По умолчанию:** `{ news: true, xhtml: true, image: true, video: true }` <br />
+<Since v="3.6.0" pkg="@astrojs/sitemap" />
+</p>
+
+Объект XML namespaces, которые нужно исключить из сгенерированного sitemap.
+
+Исключение неиспользуемых namespaces помогает сделать sitemap более "сфокусированным": поисковикам проще парсить файл, и он потребляет меньше трафика. Например, если у сайта нет новостей, видео или нескольких языков, можно исключить эти namespaces, чтобы уменьшить размер XML.
+
+По умолчанию в sitemap включены все настраиваемые namespaces (`news`, `xhtml`, `image` и `video`). Чтобы исключить один или несколько namespaces, добавьте объект `namespaces` и установите отдельные опции в `false`:
+
+```js title="astro.config.mjs" ins={8-11}
+import { defineConfig } from 'astro/config';
+import sitemap from '@astrojs/sitemap';
+
+export default defineConfig({
+  site: 'https://example.com',
+  integrations: [
+    sitemap({
+      namespaces: {
+        news: false,
+        xhtml: false, 
+      }
+    })
+  ]
+});
+```
+
+## Примеры
+
+* Официальный сайт Astro использует Astro Sitemap, чтобы генерировать [свой sitemap](https://astro.build/sitemap-index.xml).
+* [Посмотреть проекты с Astro Sitemap на GitHub](https://github.com/search?q=%22%40astrojs%2Fsitemap%22+path%3Apackage.json\&type=Code)
+
+[astro-integration]: /en/guides/integrations-guide/

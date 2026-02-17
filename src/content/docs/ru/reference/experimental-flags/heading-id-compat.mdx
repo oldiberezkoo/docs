@@ -1,0 +1,75 @@
+---
+title: Экспериментальная совместимость ID заголовков Markdown
+sidebar:
+  label: Совместимость ID заголовков Markdown
+i18nReady: true
+---
+
+import Since from '~/components/Since.astro'
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+<Since v="5.5.0" />
+</p>
+
+Флаг `experimental.headingIdCompat` делает идентификаторы (ID), генерируемые Astro для заголовков Markdown, совместимыми с распространенными платформами, такими как GitHub и npm.
+
+Чтобы включить совместимость ID заголовков, установите флаг в `true` в вашей конфигурации Astro:
+
+```js title="astro.config.mjs" ins={4-6}
+import { defineConfig } from "astro/config"
+
+export default defineConfig({
+  experimental: {
+    headingIdCompat: true,
+  }
+})
+```
+
+## Использование
+
+Этот экспериментальный флаг позволяет сохранять конечные дефисы в конце идентификаторов для заголовков Markdown, заканчивающихся специальными символами, создавая идентификаторы, совместимые с теми, которые генерируются другими распространенными платформами. Он не требует специального использования и влияет только на то, как Astro генерирует `id` для ваших заголовков, написанных с использованием синтаксиса Markdown.
+
+Astro, как и многие платформы, использует популярный пакет [`github-slugger`](https://github.com/Flet/github-slugger) для преобразования текстового содержимого заголовка Markdown в слаг (slug) для использования в идентификаторах. Этот экспериментальный флаг позволяет пропустить дополнительный шаг обработки Astro по умолчанию, который удаляет конечный дефис из конца идентификаторов для заголовков, заканчивающихся специальными символами.
+
+Например, следующий заголовок Markdown:
+
+```md
+## `<Picture />`
+```
+
+по умолчанию сгенерирует следующий HTML в Astro:
+
+```html "picture"
+<h2 id="picture"><code>&lt;Picture /&gt;</h2>
+```
+
+При использовании `experimental.headingIdCompat` тот же Markdown сгенерирует следующий HTML, который идентичен HTML платформ, таких как GitHub:
+
+```html "picture-"
+<h2 id="picture-"><code>&lt;Picture /&gt;</h2>
+```
+
+В будущей основной версии Astro перейдет на использование совместимого стиля ID по умолчанию, но вы можете включить будущее поведение раньше, используя флаг `experimental.headingIdCompat`.
+
+## Использование с плагином `rehypeHeadingIds`
+
+Если вы [используете плагин `rehypeHeadingIds`](/ru/guides/markdown-content/#id-заголовков-и-плагины) напрямую, включите режим совместимости при передаче плагина в вашей конфигурации Astro:
+
+
+```js title="astro.config.mjs" {8}
+import { defineConfig } from 'astro/config';
+import { rehypeHeadingIds } from '@astrojs/markdown-remark';
+import { otherPluginThatReliesOnHeadingIDs } from 'some/plugin/source';
+
+export default defineConfig({
+  markdown: {
+    rehypePlugins: [
+      [rehypeHeadingIds, { headingIdCompat: true }],
+      otherPluginThatReliesOnHeadingIDs,
+    ],
+  },
+});
+```

@@ -8,9 +8,9 @@ import { devServerFileWatcher } from './config/integrations/dev-server-file-watc
 import { sitemap } from './config/integrations/sitemap';
 import { localesConfig } from './config/locales';
 import { starlightPluginLlmsTxt } from './config/plugins/llms-txt';
-import { starlightPluginSmokeTest } from './config/plugins/smoke-test';
 import { rehypeTasklistEnhancer } from './config/plugins/rehype-tasklist-enhancer';
 import { remarkFallbackLang } from './config/plugins/remark-fallback-lang';
+import { starlightPluginSmokeTest } from './config/plugins/smoke-test';
 
 /* https://docs.netlify.com/configure-builds/environment-variables/#read-only-variables */
 const NETLIFY_PREVIEW_SITE = process.env.CONTEXT !== 'production' && process.env.DEPLOY_PRIME_URL;
@@ -47,9 +47,9 @@ export default defineConfig({
 			},
 			routeMiddleware: './src/routeData.ts',
 			editLink: {
-				baseUrl: 'https://github.com/withastro/docs/edit/main',
+				baseUrl: 'https://github.com/oldiberezkoo/docs/tree/master',
 			},
-			defaultLocale: 'en',
+			defaultLocale: 'ru',
 			locales: localesConfig,
 			sidebar,
 			social: [
@@ -75,7 +75,7 @@ export default defineConfig({
 	],
 	trailingSlash: 'always',
 	scopedStyleStrategy: 'where',
-	compressHTML: false,
+	compressHTML: true,
 	markdown: {
 		// Override with our own config
 		smartypants: false,

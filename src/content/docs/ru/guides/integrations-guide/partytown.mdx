@@ -1,0 +1,212 @@
+---
+type: integration
+title: '@astrojs/partytown'
+description: Узнайте, как использовать интеграцию @astrojs/partytown в вашем проекте Astro.
+sidebar:
+  label: Partytown
+githubIntegrationURL: 'https://github.com/withastro/astro/tree/main/packages/integrations/partytown/'
+category: other
+i18nReady: true
+---
+import PackageManagerTabs from '~/components/tabs/PackageManagerTabs.astro';
+
+Эта **[интеграция Astro][astro-integration]** включает [Partytown](https://partytown.qwik.dev/) в вашем проекте Astro.
+
+## Зачем Astro Partytown
+
+Partytown - это ленивая библиотека, которая помогает переносить ресурсоемкие скрипты в [web worker](https://developer.mozilla.org/en-US/docs/Web/API/Web_Workers_API) и разгружать [основной поток](https://developer.mozilla.org/en-US/docs/Glossary/Main_thread).
+
+Если вы используете сторонние скрипты для аналитики, рекламы и т.п., Partytown помогает убедиться, что они не замедляют ваш сайт.
+
+Интеграция Astro Partytown устанавливает Partytown за вас и гарантирует, что он включен на всех ваших страницах.
+
+## Установка
+
+Astro включает команду `astro add` для автоматической настройки официальных интеграций. Если вы предпочитаете, вы можете [установить интеграции вручную](#ручная-установка).
+
+Запустите одну из следующих команд в новом окне терминала.
+
+<PackageManagerTabs>
+  <Fragment slot="npm">
+  ```sh
+  npx astro add partytown
+  ```
+  </Fragment>
+  <Fragment slot="pnpm">
+  ```sh
+  pnpm astro add partytown
+  ```
+  </Fragment>
+  <Fragment slot="yarn">
+  ```sh
+  yarn astro add partytown
+  ```
+  </Fragment>
+</PackageManagerTabs>
+
+Если у вас возникнут какие-либо проблемы, [не стесняйтесь сообщать нам о них на GitHub](https://github.com/withastro/astro/issues) и попробуйте выполнить шаги ручной установки ниже.
+
+### Ручная установка
+
+Сначала установите пакет `@astrojs/partytown`:
+
+<PackageManagerTabs>
+  <Fragment slot="npm">
+  ```sh
+  npm install @astrojs/partytown
+  ```
+  </Fragment>
+  <Fragment slot="pnpm">
+  ```sh
+  pnpm add @astrojs/partytown
+  ```
+  </Fragment>
+  <Fragment slot="yarn">
+  ```sh
+  yarn add @astrojs/partytown
+  ```
+  </Fragment>
+</PackageManagerTabs>
+
+Затем примените интеграцию к вашему файлу `astro.config.*`, используя свойство `integrations`:
+
+```js title="astro.config.mjs" ins={2} ins="partytown()"
+import { defineConfig } from 'astro/config';
+import partytown from '@astrojs/partytown';
+
+export default defineConfig({
+  // ...
+  integrations: [partytown()],
+});
+```
+
+## Использование
+
+Partytown должен работать "из коробки" без дополнительной конфигурации. Если на вашем сайте уже есть сторонний скрипт, попробуйте добавить атрибут `type="text/partytown"`:
+
+```html ins='type="text/partytown"'
+<script type="text/partytown" src="fancy-analytics.js"></script>
+```
+
+Если открыть вкладку "Network" в [инструментах разработчика браузера](https://developer.chrome.com/docs/devtools/open/), вы должны увидеть, что прокси Partytown перехватывает этот запрос.
+
+## Конфигурация
+
+Чтобы настроить эту интеграцию, передайте объект `config` в вызов функции `partytown()` в `astro.config.mjs`.
+
+```js title="astro.config.mjs" {5-7}
+export default defineConfig({
+  // ...
+  integrations: [
+    partytown({
+      config: {
+        // options go here
+      },
+    }),
+  ],
+});
+```
+
+Это соответствует [объекту конфигурации Partytown](https://partytown.qwik.dev/configuration/): все опции можно задать в `partytown.config`. На этой странице описаны некоторые распространенные варианты для проектов Astro.
+
+### Включение режима отладки
+
+Partytown поставляется с режимом `debug`. Включите или выключите его, передав `true` или `false` в `config.debug`. Если [режим `debug`](https://partytown.qwik.dev/debugging) включен, он будет выводить подробные логи в консоль браузера.
+
+Если этот параметр не задан, режим `debug` будет включен по умолчанию в режиме [dev](/ru/reference/cli-reference/#astro-dev) или [preview](/ru/reference/cli-reference/#astro-preview).
+
+```js title="astro.config.mjs" {6}
+export default defineConfig({
+  // ...
+  integrations: [
+    partytown({
+      // Пример: отключить режим отладки.
+      config: { debug: false },
+    }),
+  ],
+});
+```
+
+### Проброс переменных
+
+Сторонние скрипты обычно добавляют переменные в объект `window`, чтобы вы могли взаимодействовать с ними по всему сайту. Но когда скрипт загружается в web worker, у него нет доступа к глобальному объекту `window`.
+
+Чтобы решить это, Partytown может "патчить" переменные в глобальный `window` и пробрасывать их в нужный скрипт.
+
+Укажите, какие переменные пробрасывать, с помощью опции `config.forward`. [Подробнее в документации Partytown.](https://partytown.qwik.dev/forwarding-events)
+
+```js title="astro.config.mjs" {7}
+export default defineConfig({
+  // ...
+  integrations: [
+    partytown({
+      // Пример: пробрасывать событие dataLayer.push.
+      config: {
+        forward: ['dataLayer.push'],
+      },
+    }),
+  ],
+});
+```
+
+### Проксирование запросов
+
+Некоторые сторонние скрипты могут требовать [проксирования](https://partytown.qwik.dev/proxying-requests/) через `config.resolveUrl()`, который выполняется внутри service worker. Вы можете задать эту опцию так, чтобы она проверяла URL и, при необходимости, возвращала проксированный URL:
+
+```js title="astro.config.mjs" {7-13}
+export default defineConfig({
+  // ...
+  integrations: [
+    partytown({
+      // Пример: проксировать аналитический скрипт Facebook
+      config: {
+        resolveUrl: (url) => {
+          const proxyMap = {
+            "connect.facebook.net": "my-proxy.com"
+          }
+          url.hostname = proxyMap[url.hostname] || url.hostname;
+          return url;
+        },
+      }
+    }),
+  ],
+});
+```
+
+Однако, поскольку объект `config` сериализуется при отправке на клиент, к функциям в конфигурации применяются ограничения:
+
+- Функции не могут ссылаться ни на что вне своей области видимости.
+- Функции можно писать только на JavaScript.
+
+В некоторых продвинутых сценариях вам может понадобиться передать данные в эту функцию при инициализации Partytown. Для этого можно задать `resolveUrl()` на `window.partytown`, а не в конфигурации интеграции:
+
+```astro title="Head.astro" {8-14}
+---
+const proxyMap = {
+  "connect.facebook.net": "my-proxy.com"
+};
+---
+
+<script is:inline set:html={`
+  window.partytown = {
+    resolveUrl: (url) => {
+      const proxyMap = ${JSON.stringify(proxyMap)};
+      url.hostname = proxyMap[url.hostname] || url.hostname;
+      return url;
+    },
+  };
+`} />
+```
+
+Обратите внимание: конфигурация интеграции переопределит `window.partytown`, если вы зададите одно и то же свойство в обоих местах.
+
+## Примеры
+
+* [Посмотреть проекты с Astro Partytown на GitHub](https://github.com/search?q=%22%40astrojs%2Fpartytown%22+path%3A**%2Fpackage.json\&type=code)
+
+## Ресурсы сообщества
+
+* [Implementing Google Tag Manager with Partytown and Astro](https://medium.com/@tagperfect/implementing-google-tag-manager-with-partytown-js-in-astro-my-modest-experience-983388907b35)
+* [Optimise Google Analytics using Partytown in Astro](https://ricostacruz.com/posts/google-analytics-in-astro)
+
+[astro-integration]: /en/guides/integrations-guide/

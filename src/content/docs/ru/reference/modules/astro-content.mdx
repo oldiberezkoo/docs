@@ -1,0 +1,323 @@
+---
+title: API коллекций контента
+sidebar:
+  label: 'astro:content'
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 6
+---
+import Since from '~/components/Since.astro';
+import ReadMore from '~/components/ReadMore.astro';
+
+<p><Since v="2.0.0" /></p>
+
+Коллекции контента предлагают API для настройки и запроса ваших документов Markdown или MDX в `src/content/`. О функциях и примерах использования [читайте в нашем руководстве по коллекциям контента](/ru/guides/content-collections/).
+
+## Импорт из `astro:content`
+
+```js
+import { 
+  defineCollection,
+  getCollection,
+  getEntry,
+  getEntries,
+  reference,
+  render
+ } from 'astro:content';
+```
+### `defineCollection()`
+
+<p>
+
+**Тип:** `(input: CollectionConfig) => CollectionConfig`
+<Since v="2.0.0" />
+</p>
+
+`defineCollection()` — это утилита для настройки коллекции в файле `src/content.config.*`.
+
+```ts title="src/content.config.ts"
+import { z, defineCollection } from 'astro:content';
+import { glob } from 'astro/loaders';
+
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/data/blog' }),
+  schema: z.object({
+    title: z.string(),
+    permalink: z.string().optional(),
+  }),
+});
+
+// Открываем доступ к определенной коллекции для Astro
+// с помощью экспорта `collections`
+export const collections = { blog };
+```
+
+Эта функция принимает следующие свойства:
+
+#### `loader`
+
+<p>
+
+**Тип:** <code>() => Promise&lt;Array&lt;\{ id: string, [key: string]: any }&gt; | Record&lt;string, Record&lt;string, any&gt;&gt;&gt; | <a href="/ru/reference/content-loader-reference/#object-loader-api">Loader</a></code>
+<Since v="5.0.0" />
+</p>
+
+`loader` (загрузчик) — это объект или функция, позволяющая загружать данные из любого источника, локального или удаленного, в коллекции контента.
+
+[Смотрите руководство по `Коллекциям контента`](/ru/guides/content-collections/#определение-загрузчика-коллекции) для примеров использования.
+
+#### `schema`
+
+<p>
+
+**Тип:** <code>ZodType | (context: <a href="#schemacontext">SchemaContext</a>) => ZodType</code>
+<Since v="2.0.0" />
+</p>
+
+`schema` — это необязательный объект Zod для настройки типа и формы метаданных (frontmatter) документа для коллекции. Каждое значение должно использовать [валидатор Zod](/ru/reference/modules/astro-zod/#валидаторы-общих-типов-данных).
+
+[Смотрите руководство по `Коллекциям контента`](/ru/guides/content-collections/#определение-схемы-коллекции) для примеров использования.
+
+### `reference()`
+
+<p>
+
+**Тип:** `(collection: string) => ZodEffects<ZodString, { collection, id: string }>`<br />
+<Since v="2.5.0" />
+</p>
+
+Функция `reference()` используется в конфигурации контента для определения отношения, или «ссылки», от одной коллекции к другой. Она принимает имя коллекции и преобразует ссылку в объект, содержащий имя коллекции и id ссылки.
+
+Этот пример определяет ссылки от автора блога к коллекции `authors` и массив связанных постов к той же коллекции `blog`:
+
+```ts
+import { defineCollection, reference, z } from 'astro:content';
+import { glob, file } from 'astro/loaders';
+
+const blog = defineCollection({
+  loader: glob({ pattern: '**/*.md', base: './src/data/blog' }),
+  schema: z.object({
+    // Ссылка на одного автора из коллекции `authors` по `id`
+    author: reference('authors'),
+    // Ссылка на массив связанных постов из коллекции `blog` по `slug`
+    relatedPosts: z.array(reference('blog')),
+  })
+});
+
+const authors = defineCollection({
+  loader: file("src/data/authors.json"),
+  schema: z.object({ /* ... */ })
+});
+
+export const collections = { blog, authors };
+```
+Валидация ссылочных записей происходит во время выполнения при использовании `getEntry()` или `getEntries()`:
+
+```astro title="src/pages/[posts].astro"
+// если ссылочная запись недействительна, вернется undefined.
+const relatedPosts = await getEntries(blogPost.data.relatedPosts);
+```
+
+[Смотрите руководство по `Коллекциям контента`](/ru/guides/content-collections/#определение-ссылок-на-коллекции) для примеров использования.
+
+### `getCollection()`
+
+<p>
+
+**Тип:** `(collection: string, filter?: (entry: CollectionEntry<collection>) => boolean) => CollectionEntry<collection>[]`
+<Since v="2.0.0" />
+</p>
+
+`getCollection()` — это функция, которая извлекает список записей коллекции контента по имени коллекции.
+
+По умолчанию она возвращает все элементы коллекции и принимает необязательную функцию `filter`, чтобы сузить выборку по свойствам записи. Это позволяет запрашивать только некоторые элементы коллекции на основе `id` или значений метаданных через объект `data`.
+
+```astro
+---
+import { getCollection } from 'astro:content';
+
+// Получить все записи `src/content/blog/`
+const allBlogPosts = await getCollection('blog');
+
+// Вернуть только посты с `draft: true` в метаданных
+const draftBlogPosts = await getCollection('blog', ({ data }) => {
+  return data.draft === true;
+});
+---
+```
+
+[Смотрите руководство по `Коллекциям контента`](/ru/guides/content-collections/#запрос-коллекций) для примеров использования.
+
+### `getEntry()`
+
+<p>
+
+**Типы:**
+* `(collection: string, id: string) => Promise<CollectionEntry<collection> | undefined>`
+* `({ collection: string, id: string }) => Promise<CollectionEntry<collection> | undefined>`
+<Since v="2.5.0" />
+</p>
+
+`getEntry()` — это функция, которая извлекает одну запись коллекции по имени коллекции и `id` записи. `getEntry()` также может использоваться для получения ссылочных записей для доступа к свойствам `data` или `body`:
+
+```astro
+---
+import { getEntry } from 'astro:content';
+
+// Получить `src/content/blog/enterprise.md`
+const enterprisePost = await getEntry('blog', 'enterprise');
+
+// Получить `src/content/captains/picard.json`
+const picardProfile = await getEntry('captains', 'picard');
+
+// Получить профиль, на который ссылается `data.captain`
+const enterpriseCaptainProfile = await getEntry(enterprisePost.data.captain);
+---
+```
+
+Смотрите руководство по `Коллекциям контента` для примеров [запроса записей коллекции](/ru/guides/content-collections/#запрос-коллекций).
+
+### `getEntries()`
+
+<p>
+
+**Тип:** `(Array<{ collection: string, id: string }>) => Array<CollectionEntry<collection>>`
+<Since v="2.5.0" />
+</p>
+
+`getEntries()` — это функция, которая извлекает несколько записей коллекции из одной и той же коллекции. Это полезно для [возврата массива ссылочных записей](/ru/guides/content-collections/#определение-ссылок-на-коллекции) для доступа к их связанным свойствам `data` и `body`.
+
+```astro
+---
+import { getEntries, getEntry } from 'astro:content';
+
+const enterprisePost = await getEntry('blog', 'enterprise');
+
+// Получить связанные посты, на которые ссылается `data.relatedPosts`
+const enterpriseRelatedPosts = await getEntries(enterprisePost.data.relatedPosts);
+---
+```
+
+### `render()`
+
+<p>
+
+**Тип:** `(entry: CollectionEntry) => Promise<RenderedEntry>`
+<Since v="5.0.0" />
+</p>
+
+Функция для компиляции данной записи для рендеринга. Возвращает следующие свойства:
+
+- `<Content />` — Компонент, используемый для рендеринга содержимого документа в файле Astro.
+- `headings` — Сгенерированный список заголовков, [аналогичный утилите Astro `getHeadings()`](/ru/guides/markdown-content/#доступные-свойства) при импорте Markdown и MDX.
+- `remarkPluginFrontmatter` — Измененный объект метаданных (frontmatter) после применения любых [плагинов remark или rehype](/ru/guides/markdown-content/#программное-изменение-frontmatter). Установлен тип `any`.
+
+```astro
+---
+import { getEntry, render } from 'astro:content';
+const entry = await getEntry('blog', 'entry-1');
+
+if (!entry) {
+   // Обработка ошибки, например:
+  throw new Error('Не удалось найти пост блога 1');
+}
+const { Content, headings, remarkPluginFrontmatter } = await render(entry);
+---
+```
+
+[Смотрите руководство по `Коллекциям контента`](/ru/guides/content-collections/#рендеринг-контента) для примеров использования.
+
+## Типы `astro:content`
+
+```ts
+import type {
+  CollectionEntry,
+  CollectionKey,
+  ContentCollectionKey,
+  DataCollectionKey,
+  SchemaContext,
+  } from 'astro:content';
+```
+
+### `CollectionEntry`
+
+Функции запросов, включая [`getCollection()`](#getcollection), [`getEntry()`](#getentry) и [`getEntries()`](#getentries), возвращают записи с типом `CollectionEntry`. Этот тип доступен как утилита из `astro:content`:
+
+```ts
+import type { CollectionEntry } from 'astro:content';
+```
+
+`CollectionEntry` — это общий (generic) тип. Используйте его с именем коллекции, которую вы запрашиваете.
+Например, запись в вашей коллекции `blog` будет иметь тип `CollectionEntry<'blog'>`.
+
+Каждая `CollectionEntry` представляет собой объект со следующими значениями:
+
+#### `id`
+
+**Тип:** `string`
+
+Уникальный ID. Обратите внимание, что все ID из встроенного загрузчика `glob()` в Astro слагифицируются (преобразуются в slug).
+
+#### `collection`
+
+**Пример типа:** `'blog' | 'authors' | ...`
+
+Имя коллекции, в которой находятся записи. Это имя используется для ссылки на коллекцию в вашей схеме и в функциях запросов.
+
+#### `data`
+
+**Тип:** `CollectionSchema<TCollectionName>`
+
+Объект свойств метаданных (frontmatter), выведенный из схемы вашей коллекции ([см. справочник `defineCollection()`](#definecollection)). По умолчанию `any`, если схема не настроена.
+
+#### `body`
+
+**Тип:** `string | undefined`
+
+Строка, содержащая необработанное, некомпилированное тело документа Markdown или MDX.
+
+Обратите внимание, что если [`retainBody`](/ru/reference/content-loader-reference/#retainbody) установлено в `false`, это значение будет `undefined` вместо содержимого исходного файла.
+
+### `CollectionKey`
+
+<p><Since v="3.1.0" /></p>
+
+Строковое объединение всех имен коллекций, определенных в вашем файле `src/content.config.*`. Этот тип может быть полезен при определении общей функции, оборачивающей встроенную `getCollection()`.
+
+```ts
+import { type CollectionKey, getCollection } from 'astro:content';
+
+async function queryCollection(collection: CollectionKey) {
+  return getCollection(collection, ({ data }) => {
+    return data.draft !== true;
+  });
+}
+```
+
+### `SchemaContext`
+
+Объект `context`, который `defineCollection` использует для функциональной формы `schema`. Этот тип может быть полезен при создании переиспользуемых схем для нескольких коллекций.
+
+Включает следующее свойство:
+
+- `image` — Помощник схемы `image()`, который позволяет [использовать локальные изображения в коллекциях контента](/ru/guides/images/#изображения-в-коллекциях-контента).
+
+```ts
+import { defineCollection, z, type SchemaContext } from "astro:content";
+
+export const imageSchema = ({ image }: SchemaContext) =>
+    z.object({
+        image: image(),
+        description: z.string().optional(),
+    });
+
+const blog = defineCollection({
+  loader: /* ... */,
+  schema: ({ image }) => z.object({
+    title: z.string(),
+    permalink: z.string().optional(),
+    image: imageSchema({ image })
+  }),
+});
+```

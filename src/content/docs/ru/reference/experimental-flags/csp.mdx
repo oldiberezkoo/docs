@@ -1,0 +1,497 @@
+---
+title: Экспериментальная политика безопасности контента (CSP)
+sidebar:
+  label: Политика безопасности контента (CSP)
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 6
+---
+
+import Since from '~/components/Since.astro'
+
+<p>
+
+**Тип:** `boolean | object`<br />
+**По умолчанию:** `false`<br />
+<Since v="5.9.0" />
+</p>
+
+Включает поддержку [Политики безопасности контента (CSP)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP), чтобы помочь минимизировать определенные типы угроз безопасности, контролируя, какие ресурсы документу разрешено загружать. Это обеспечивает дополнительную защиту от атак [межсайтового скриптинга (XSS)](https://developer.mozilla.org/en-US/docs/Glossary/Cross-site_scripting).
+
+Включение этой функции добавляет дополнительную безопасность к **обработке Astro обработанных и объединенных скриптов и стилей** по умолчанию и позволяет вам дополнительно настраивать эти и другие типы контента.
+
+Эта экспериментальная функция CSP имеет некоторые ограничения. Встроенные (inline) скрипты не поддерживаются «из коробки», но вы можете [предоставить свои собственные хеши](#hashes) для внешних и встроенных скриптов. [Переходы (view transitions) Astro](/ru/guides/view-transitions/) с использованием `<ClientRouter />` не поддерживаются, но вы можете [рассмотреть возможность перехода на нативный браузерный API View Transition](https://events-3bg.pages.dev/jotter/astro-view-transitions/) вместо этого, если вы не используете улучшения Astro для нативных API View Transitions и Navigation.
+
+:::note
+В связи с природой сервера разработки Vite, эта функция не поддерживается при работе в режиме `dev`. Вместо этого вы можете протестировать ее в вашем проекте Astro, используя `build` и `preview`.
+:::
+
+Чтобы включить эту функцию, добавьте экспериментальный флаг в вашу конфигурацию Astro:
+
+```js title="astro.config.mjs" ins={4-6}
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: true
+  }
+});
+```
+
+При включении Astro добавит элемент `<meta>` внутри элемента `<head>` каждой страницы.
+
+Этот элемент будет иметь атрибут `http-equiv="content-security-policy"`, а атрибут `content` будет предоставлять значения для [директив](#directives) `script-src` и `style-src` на основе скриптов и стилей, используемых на странице.
+
+```html
+<head>
+  <meta 
+    http-equiv="content-security-policy" 
+    content="
+      script-src 'self' 'sha256-somehash'; 
+      style-src 'self' 'sha256-somehash';
+    "
+  >
+</head>
+```
+
+## Конфигурация
+
+Вы можете дополнительно настроить элемент `<meta>`, включив эту функцию с объектом конфигурации, который включает дополнительные опции.
+
+### `algorithm`
+
+<p>
+
+**Тип:** `'SHA-256' | 'SHA-512' | 'SHA-384'`<br />
+**По умолчанию:** `'SHA-256'`<br />
+<Since v="5.9.0" />
+</p>
+
+[Хеш-функция](https://developer.mozilla.org/en-US/docs/Glossary/Hash_function) для использования при генерации хешей стилей и скриптов, создаваемых Astro.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      algorithm: 'SHA-512'
+    }
+  }
+});
+```
+
+### `directives`
+
+<p>
+
+**Тип:** `CspDirective[]`<br />
+**По умолчанию:** `[]`<br />
+<Since v="5.9.0" />
+</p>
+
+Список [директив CSP](https://content-security-policy.com/#directive), определяющий допустимые источники для конкретных типов контента.
+
+Хотя Astro должен контролировать директивы `script-src` и `style-src`, можно контролировать другие директивы CSP с помощью поля `csp.directives`. Эти директивы добавляются ко всем страницам. Принимает список типобезопасных директив:
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      directives: [
+        "default-src 'self'",
+        "img-src 'self' https://images.cdn.example.com"
+      ]
+    }
+  }
+});
+```
+
+После сборки элемент `<meta>` добавит ваши директивы в значение `content` наряду с директивами Astro по умолчанию:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    default-src 'self';
+    img-src 'self' 'https://images.cdn.example.com';
+    script-src 'self' 'sha256-somehash';
+    style-src 'self' 'sha256-somehash';
+  "
+>
+```
+
+### `styleDirective` и `scriptDirective`
+
+<p>
+
+**Тип:** `object`<br />
+**По умолчанию:** `{}`<br />
+<Since v="5.9.0" />
+</p>
+
+Объекты конфигурации, позволяющие переопределить источники по умолчанию для директив `style-src` и `script-src` с помощью свойства [`resources`](#resources) или предоставить дополнительные [хеши](#hashes) для рендеринга.
+
+Эти свойства добавляются ко всем страницам и **полностью переопределяют ресурсы Astro по умолчанию**, а не добавляются к ним. Поэтому вы должны явно указать любые значения по умолчанию, которые вы хотите включить.
+
+#### `resources`
+
+<p>
+
+**Тип:** `string[]`<br />
+**По умолчанию:** `[]`<br />
+<Since v="5.9.0" />
+</p>
+
+Список допустимых источников для директив `script-src` и `style-src`, включая [значения для подклассов](#добавление-значений-для-подклассов).
+
+Директивы `script-src` и `style-src` обрабатываются Astro по умолчанию и используют ресурс `'self'`. Это означает, что скрипты и стили могут быть загружены только с текущего хоста (обычно текущего веб-сайта).
+
+Чтобы переопределить источник по умолчанию, вы можете предоставить список ресурсов вместо этого. Он не будет включать `'self'` по умолчанию, и его необходимо включить в этот список, если вы хотите его сохранить. Эти ресурсы добавляются ко всем страницам.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      styleDirective: {
+        resources: [
+          "'self'",
+          "https://styles.cdn.example.com"
+        ]
+      },
+      scriptDirective: {
+        resources: [
+          "https://cdn.example.com"
+        ]
+      }
+    }
+  }
+});
+```
+
+После сборки элемент `<meta>` вместо этого применит ваши источники к директивам `style-src` и `script-src`:
+
+```html
+<head>
+  <meta
+    http-equiv="content-security-policy" 
+    content="
+      script-src https://cdn.example.com 'sha256-somehash'; 
+      style-src 'self' https://styles.cdn.example.com 'sha256-somehash';
+    "
+  >
+</head>
+```
+
+##### Добавление значений для подклассов
+
+Вы также можете использовать это поле для добавления допустимых значений, принадлежащих [`script-src-attr`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src-attr), [`script-src-elem`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src-elem), [`style-src-attr`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/style-src-attr) и [`style-src-elem`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/style-src-elem), таких как `unsafe-hashes` и `unsafe-inline`.
+
+Например, если у вас есть внешняя библиотека, которая добавляет скрипты или встроенные стили к некоторым HTML-элементам страницы, вы можете добавить `unsafe-inline`, чтобы сообщить браузеру, что их безопасно рендерить.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      styleDirective: {
+        resources: [
+          "'unsafe-inline'"
+        ]
+      },
+      scriptDirective: {
+        resources: [
+          "'unsafe-inline'"
+        ]
+      }
+    }
+  }
+});
+```
+
+После сборки директивы `style-src` и `script-src` будут содержать ресурс `'unsafe-line'`:
+
+```html
+<head>
+  <meta
+    http-equiv="content-security-policy" 
+    content="
+      script-src 'unsafe-line'; 
+      style-src 'unsafe-line';
+    "
+  >
+</head>
+```
+
+##### Несколько ресурсов
+
+Когда ресурсы вставляются несколько раз или из нескольких источников (например, определены в вашей конфигурации `csp` и добавлены с использованием [API выполнения CSP](#api-выполнения)), Astro удалит любые дубликаты и объединит новые.
+
+В следующем примере директивы `img-src https://global.cdn.example.org` и `default-src https://global.cdn.example.org` установлены в конфигурации `csp` и будут применены ко всем страницам.
+
+```js title="astro.config.mjs"
+export default defineConfig({
+  experimental: {
+    csp: {
+      directives: [
+        "img-src https://global.cdn.example.org",
+        "default-src https://global.cdn.example.org"
+      ]
+    }
+  }
+})
+```
+
+Кроме того, на отдельной странице ресурсы `img-src https://vendor.cdn.example.org/` и `default-src https://global.cdn.example.org/ https://vendor.cdn.example.org/` добавляются с использованием [Astro.csp.insertDirective](#cspinsertdirective).
+
+```astro title="src/pages/index.astro"
+---
+Astro.csp.insertDirective("img-src https://vendor.cdn.example.org")
+Astro.csp.insertDirective("default-src https://global.cdn.example.org https://vendor.cdn.example.org")
+---
+```
+
+Во время сборки ресурсы директив `img-src` и `default-src` для страницы `index.html` объединяются и дедуплицируются для создания соответствующих заголовков.
+
+```html
+<head>
+  <meta
+    http-equiv="content-security-policy" 
+    content="
+        img-src https://global.cdn.example.org https://vendor.cdn.example.org;
+        default-src https://global.cdn.example.org https://vendor.cdn.example.org;
+    "
+  >
+</head>
+```
+
+
+#### `hashes`
+
+<p>
+
+**Тип:** `CspHash[]`<br />
+**По умолчанию:** `[]`<br />
+<Since v="5.9.0" />
+</p>
+
+Список дополнительных хешей для рендеринга.
+
+Если у вас есть внешние скрипты или стили, которые не генерируются Astro, или встроенные скрипты, эта опция конфигурации позволяет предоставить дополнительные хеши для рендеринга.
+
+Вы должны предоставить хеши, которые начинаются с `sha384-`, `sha512-` или `sha256-`. Другие значения вызовут ошибку валидации. Эти хеши добавляются ко всем страницам.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      styleDirective: {
+        hashes: [
+          "sha384-styleHash",
+          "sha512-styleHash",
+          "sha256-styleHash"
+        ]
+      },
+      scriptDirective: {
+        hashes: [
+          "sha384-scriptHash",
+          "sha512-scriptHash",
+          "sha256-scriptHash"
+        ]
+      }
+    }
+  }
+});
+```
+
+После сборки элемент `<meta>` будет включать ваши дополнительные хеши в директивах `script-src` и `style-src`:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    script-src 'self' 'sha384-scriptHash' 'sha512-scriptHash' 'sha256-scriptHash' 'sha256-generatedByAstro';
+    style-src 'self' 'sha384-styleHash' 'sha512-styleHash' 'sha256-styleHash' 'sha256-generatedByAstro';
+  "
+>
+```
+
+#### `strictDynamic`
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+<Since v="5.9.0" />
+</p>
+
+Включает [ключевое слово `strict-dynamic`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/CSP#the_strict-dynamic_keyword) для поддержки динамической инъекции скриптов.
+
+```js title="astro.config.mjs"
+import { defineConfig } from 'astro/config';
+
+export default defineConfig({
+  experimental: {
+    csp: {
+      scriptDirective: {
+        strictDynamic: true
+      }
+    }
+  }
+});
+```
+
+## API выполнения
+
+Вы можете настраивать элемент `<meta>` для каждой страницы с помощью API выполнения, доступных из глобального объекта `Astro` внутри компонентов `.astro` или типа `APIContext` в эндпоинтах и мидлваре.
+
+### `csp.insertDirective`
+
+<p>
+
+**Тип:** `(directive: CspDirective) => void`<br />
+<Since v="5.9.0" />
+</p>
+
+Добавляет одну директиву на текущую страницу. Вы можете вызывать этот метод несколько раз для добавления дополнительных директив.
+
+```astro
+---
+Astro.csp.insertDirective("default-src 'self'");
+Astro.csp.insertDirective("img-src 'self' https://images.cdn.example.com");
+---
+```
+
+После сборки элемент `<meta>` для этой отдельной страницы будет включать ваши дополнительные директивы наряду с существующими директивами `script-src` и `style-src`:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    default-src 'self'; 
+    img-src 'self' https://images.cdn.example.com;
+    script-src 'self' 'sha256-somehash';
+    style-src 'self' 'sha256-somehash';
+  "
+>
+```
+
+### `csp.insertStyleResource`
+
+<p>
+
+**Тип:** `(resource: string) => void`<br />
+<Since v="5.9.0" />
+</p>
+
+Вставляет новый ресурс для использования в директиве `style-src`.
+
+```astro
+---
+Astro.csp.insertStyleResource("https://styles.cdn.example.com");
+---
+```
+
+После сборки элемент `<meta>` для этой отдельной страницы добавит ваш источник в директиву `style-src` по умолчанию:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    script-src 'self' 'sha256-somehash';
+    style-src https://styles.cdn.example.com 'sha256-somehash';
+  "
+>
+```
+
+### `csp.insertStyleHash`
+
+<p>
+
+**Тип:** `(hash: CspHash) => void`<br />
+<Since v="5.9.0" />
+</p>
+
+Добавляет новый хеш в директиву `style-src`.
+
+```astro
+---
+Astro.csp.insertStyleHash("sha512-styleHash");
+---
+```
+
+После сборки элемент `<meta>` для этой отдельной страницы добавит ваш хеш в директиву `style-src` по умолчанию:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    script-src 'self' 'sha256-somehash';
+    style-src 'self' 'sha256-somehash' 'sha512-styleHash';
+  "
+>
+```
+
+### `csp.insertScriptResource`
+
+<p>
+
+**Тип:** `(resource: string) => void`<br />
+<Since v="5.9.0" />
+</p>
+
+Вставляет новый допустимый источник для использования в директиве `script-src`.
+
+```astro
+---
+Astro.csp.insertScriptResource("https://scripts.cdn.example.com");
+---
+```
+
+После сборки элемент `<meta>` для этой отдельной страницы добавит ваш источник в директиву `script-src` по умолчанию:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    script-src https://scripts.cdn.example.com 'sha256-somehash';
+    style-src 'self' 'sha256-somehash';
+  "
+>
+```
+
+### `csp.insertScriptHash`
+
+<p>
+
+**Тип:** `(hash: CspHash) => void`<br />
+<Since v="5.9.0" />
+</p>
+
+Добавляет новый хеш в директиву `script-src`.
+
+```astro
+---
+Astro.csp.insertScriptHash("sha512-scriptHash");
+---
+```
+
+После сборки элемент `<meta>` для этой отдельной страницы добавит ваш хеш в директиву `script-src` по умолчанию:
+
+```html
+<meta
+  http-equiv="content-security-policy"
+  content="
+    script-src 'self' 'sha256-somehash' 'sha512-styleHash';
+    style-src 'self' 'sha256-somehash';
+  "
+>
+```

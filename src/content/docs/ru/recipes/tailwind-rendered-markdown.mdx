@@ -1,0 +1,56 @@
+---
+title: Стилизация Markdown с помощью Tailwind Typography
+description: Узнайте, как использовать плагин @tailwindcss/typography для оформления контента из Markdown.
+i18nReady: true
+type: recipe
+---
+import { Steps } from '@astrojs/starlight/components';
+import PackageManagerTabs from '~/components/tabs/PackageManagerTabs.astro';
+
+Плагин [Tailwind Typography](https://tailwindcss.com/docs/typography-plugin) — это лучший способ оформить отрендеренный Markdown (например, из [коллекций контента](/ru/guides/content-collections/)), так как он автоматически добавляет красивые стили для заголовков, списков, ссылок и изображений.
+
+## Предварительные требования
+*   Проект Astro с установленным [Tailwind](/ru/guides/styling/#tailwind).
+*   Использование [коллекций контента](/ru/guides/content-collections/).
+
+## Настройка
+
+<Steps>
+1. Установите плагин:
+
+    <PackageManagerTabs>
+      <Fragment slot="npm">```shell npm install -D @tailwindcss/typography ```</Fragment>
+      <Fragment slot="pnpm">```shell pnpm add -D @tailwindcss/typography ```</Fragment>
+      <Fragment slot="yarn">```shell yarn add --dev @tailwindcss/typography ```</Fragment>
+    </PackageManagerTabs>
+
+2. Добавьте его в файл `src/styles/global.css`:
+
+    ```css title="src/styles/global.css"
+    @import 'tailwindcss';
+    @plugin '@tailwindcss/typography';
+    ```
+
+3. Создайте компонент-обертку `<Prose />`, который применяет класс `prose`:
+
+    ```astro title="src/components/Prose.astro"
+    <div class="prose dark:prose-invert max-w-none">
+      <slot />
+    </div>
+    ```
+
+4. Используйте обертку на странице, где вы рендерите контент:
+
+    ```astro
+    ---
+    import Prose from '../components/Prose.astro';
+    import { getEntry, render } from 'astro:content';
+
+    const entry = await getEntry('blog', 'my-post');
+    const { Content } = await render(entry);
+    ---
+    <Prose>
+      <Content />
+    </Prose>
+    ```
+</Steps>

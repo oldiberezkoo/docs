@@ -1,0 +1,277 @@
+---
+title: Справочник API Middleware (Мидлвар)
+sidebar:
+  label: 'astro:middleware'
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 6
+---
+import Since from '~/components/Since.astro';
+import ReadMore from '~/components/ReadMore.astro';
+
+<p><Since v="2.6.0" /></p>
+
+Middleware (мидлвар) позволяет перехватывать запросы и ответы и динамически внедрять поведение каждый раз, когда страница или эндпоинт готовы к рендерингу. О функциях и примерах использования [читайте в нашем руководстве по middleware](/ru/guides/middleware/).
+
+## Импорт из `astro:middleware`
+
+Следующие помощники импортируются из виртуального модуля middleware:
+
+```js
+import { 
+  defineMiddleware,
+  sequence,
+} from 'astro:middleware';
+```
+
+### `defineMiddleware()`
+
+<p>
+
+**Тип:** <code>(fn: <a href="#middlewarehandler">MiddlewareHandler</a>) => MiddlewareHandler</code>
+</p>
+
+Функция для определения функции middleware с типобезопасностью. Когда вы используете эту утилиту, аргументы [`context`](#context) и [`next()`](#next) автоматически типизируются, и вы получите ошибку Typescript, если попытаетесь вернуть [значение, не поддерживаемое в вашем middleware](#middlewarehandler).
+
+```ts title="src/middleware.ts"
+import { defineMiddleware } from "astro:middleware";
+
+export const onRequest = defineMiddleware((context, next) => {
+  /* логика вашего middleware */
+});
+```
+
+### `sequence()`
+
+<p>
+
+**Тип:** <code>(...handlers: <a href="#middlewarehandler">MiddlewareHandler</a>[]) => MiddlewareHandler</code>
+</p>
+
+Функция, которая принимает функции middleware в качестве аргументов и выполняет их в том порядке, в котором они были переданы.
+
+```js title="src/middleware.js"
+import { sequence } from "astro:middleware";
+
+async function validation(context, next) {/* ... */}
+async function auth(context, next) {/* ... */}
+async function greeting(context, next) {/* ... */}
+
+export const onRequest = sequence(validation, auth, greeting);
+```
+
+## Импорт из `astro/middleware`
+
+Следующие помощники могут быть импортированы из обычного модуля middleware при создании [интеграции Astro](/ru/reference/integrations-reference/):
+
+```js
+import {
+  createContext,
+  defineMiddleware,
+  sequence,
+  trySerializeLocals,
+} from "astro/middleware";
+```
+
+### `createContext()`
+
+<p>
+
+**Тип:** <code>(context: <a href="#createcontext-1">CreateContext</a>) => <a href="/ru/reference/api-reference/">APIContext</a></code><br />
+<Since v="2.8.0" />
+</p>
+
+Низкоуровневый API для создания [`APIContext`](/ru/reference/api-reference/), который передается в функцию Astro middleware [`onRequest()`](#onrequest).
+
+Эта функция может использоваться интеграциями/адаптерами для программного выполнения middleware Astro.
+
+### `defineMiddleware()`
+
+Смотрите [`defineMiddleware()`](#definemiddleware) из `astro:middleware`.
+
+### `sequence()`
+
+Смотрите [`sequence()`](#sequence) из `astro:middleware`.
+
+### `trySerializeLocals()`
+
+<p>
+
+**Тип:** `(value: unknown) => string`<br />
+<Since v="2.8.0" />
+</p>
+
+Низкоуровневый API, который принимает любое значение и пытается вернуть его сериализованную версию (строку). Если значение не может быть сериализовано, функция выбросит ошибку времени выполнения.
+
+## Типы `astro/middleware`
+
+Следующие типы импортируются из обычного модуля middleware:
+
+```js
+import type {
+  CreateContext,
+} from "astro/middleware";
+```
+
+### `CreateContext`
+
+<p>
+
+**Тип:** `{ request: Request; params?: Params; userDefinedLocales?: string[]; defaultLocale: string; locals: App.Locals; }`<br />
+<Since v="2.8.0" />
+</p>
+
+Объект для [создания контекста](#createcontext), который будет передан в Astro middleware. Содержит следующие свойства:
+
+#### `request`
+
+<p>
+
+**Тип:** `Request`
+</p>
+
+Входящий объект [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request).
+
+#### `params`
+
+<p>
+
+**Тип:** `Params`
+</p>
+
+Объект, содержащий необязательные параметры, которые будут переданы в [`Astro.params`](/ru/reference/api-reference/#params).
+
+#### `userDefinedLocales`
+
+<p>
+
+**Тип:** `string[]`<br />
+<Since v="3.5.0" />
+</p>
+
+Список поддерживаемых локалей, определенных в [конфигурации `i18n` пользователя](/ru/reference/configuration-reference/#i18nlocales).
+
+#### `defaultLocale`
+
+<p>
+
+**Тип:** `string`<br />
+<Since v="4.16.0" />
+</p>
+
+Локаль по умолчанию, определенная в [конфигурации `i18n` пользователя](/ru/reference/configuration-reference/#i18ndefaultlocale).
+
+#### `locals`
+
+<p>
+
+**Тип:** `App.Locals`<br />
+<Since v="5.0.0" />
+</p>
+
+Объект для хранения произвольной информации из middleware, доступный пользователю через [`Astro.locals`](/ru/reference/api-reference/#locals).
+
+<ReadMore>Узнайте больше о [хранении данных в `locals`](/ru/guides/middleware/#хранение-данных-в-contextlocals) с примером использования.</ReadMore>
+
+## Типы `astro`
+
+```js
+import type {
+  MiddlewareHandler,
+  MiddlewareNext,
+  RewritePayload,
+} from "astro";
+```
+
+### `MiddlewareHandler`
+
+<p>
+
+**Тип:** <code>(context: <a href="/ru/reference/api-reference/">APIContext</a>, next: <a href="#middlewarenext">MiddlewareNext</a>) => Promise\<Response\> | Response | Promise\<void\> | void</code>
+</p>
+
+Представляет функцию middleware Astro. Обработчики middleware получают два аргумента и могут либо вернуть `Response` напрямую, либо вызвать `next()` для вызова следующего middleware в цепочке. В качестве альтернативы вы можете использовать [`defineMiddleware()`](#definemiddleware) для получения типобезопасности для вашего middleware.
+
+Следующий пример импортирует тип `MiddlewareHandler` для получения типобезопасности в функции [`onRequest()`](#onrequest):
+
+```ts title="src/middleware.ts"
+import type { MiddlewareHandler } from "astro";
+
+export const onRequest: MiddlewareHandler = (context, next) => {
+  /* логика middleware */
+};
+```
+
+Обработчик middleware получает следующие свойства:
+
+#### `context`
+
+<p>
+
+**Тип:** [`APIContext`](/ru/reference/api-reference/)
+</p>
+
+Объект [контекста Astro](/ru/reference/api-reference/), зеркалирующий многие глобальные свойства `Astro`.
+
+#### `next()`
+
+<p>
+
+**Тип:** [`MiddlewareNext`](#middlewarenext)<br />
+</p>
+
+Функция, которая вызывает все последующие middleware в цепочке и возвращает `Response`. Например, другие middleware могут изменить HTML-тело ответа, и ожидание результата `next()` позволит вашему middleware отреагировать на эти изменения.
+
+Начиная с Astro v4.13.0, `next()` принимает необязательный параметр пути URL в виде строки, `URL` или `Request` для [перезаписи (rewrite)](/ru/guides/routing/#перезапись-rewrites) текущего запроса без повторного запуска новой фазы рендеринга.
+
+Следующий пример использует `next()` для обслуживания контента из другого пути, когда текущий путь совпадает с `/old-path`:
+
+```ts title="src/middleware.ts"
+import type { MiddlewareHandler } from "astro";
+
+export const onRequest: MiddlewareHandler = (context, next) => {
+  if (context.url.pathname === '/old-path') {
+    return next('/new-path');
+  }
+  return next();
+};
+```
+
+### `MiddlewareNext`
+
+<p>
+
+**Тип:** <code>(rewritePayload?: <a href="#rewritepayload">RewritePayload</a>) => Promise\<Response\></code><br />
+</p>
+
+Представляет [функцию `next()`](#next), передаваемую в обработчики middleware.
+
+### `RewritePayload`
+
+<p>
+
+**Тип:** `string | URL | Request`<br />
+<Since v="4.13.0" />
+</p>
+
+Представляет назначение для [перезаписи (rewrite)](/ru/guides/routing/#перезапись-rewrites) при передаче в функцию [`next()`](#next).
+
+## Экспорты middleware
+
+При определении middleware вашего проекта в `src/middleware.js` экспортируйте следующие определенные пользователем функции:
+
+### `onRequest()`
+
+**Тип:** [`MiddlewareHandler`](#middlewarehandler)
+
+Обязательная экспортируемая функция из `src/middleware.js`, которая будет вызываться перед рендерингом каждой страницы или маршрута API. Она получает два аргумента: [`context`](#context) и [`next()`](#next). `onRequest()` должна возвращать `Response`: либо напрямую, либо вызывая `next()`.
+
+```js title="src/middleware.js"
+export function onRequest (context, next) {
+  // перехват данных ответа из запроса
+  // опционально, трансформация ответа
+  // возврат Response напрямую или результата вызова `next()`
+  return next();
+};
+```

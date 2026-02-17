@@ -1,0 +1,1412 @@
+---
+title: Справочник API Assets (Изображения)
+sidebar:
+  label: 'astro:assets'
+i18nReady: true
+tableOfContents:
+  minHeadingLevel: 2
+  maxHeadingLevel: 3
+---
+import Since from '~/components/Since.astro';
+import ReadMore from '~/components/ReadMore.astro';
+
+<p><Since v="3.0.0" /></p>
+
+Astro предоставляет встроенные компоненты и вспомогательные функции для оптимизации и отображения ваших изображений. Информацию о функциях и примеры использования [смотрите в нашем руководстве по изображениям](/ru/guides/images/).
+
+## Импорт из `astro:assets`
+
+Следующие помощники импортируются из виртуального модуля `astro:assets`:
+
+```js
+import { 
+  Image,
+  Picture,
+  getImage,
+  inferRemoteSize,
+  getConfiguredImageService,
+  imageConfig,
+} from 'astro:assets';
+```
+
+### `<Image />`
+
+Компонент `<Image />` оптимизирует и преобразует изображения.
+
+Этот компонент также можно использовать для создания [адаптивных изображений](#свойства-адаптивного-изображения), которые могут подстраиваться под размер контейнера или размер и разрешение экрана устройства.
+
+```astro title="src/components/MyComponent.astro"
+---
+// импорт компонента Image и изображения
+import { Image } from 'astro:assets';
+import myImage from "../assets/my_image.png"; // Изображение 1600x900
+---
+
+<!-- `alt` обязателен для компонента Image -->
+<Image src={myImage} alt="Описание моего изображения." />
+```
+
+```html
+<!-- Вывод -->
+<!-- Изображение оптимизировано, применены правильные атрибуты -->
+<img
+  src="/_astro/my_image.hash.webp"
+  width="1600"
+  height="900"
+  decoding="async"
+  loading="lazy"
+  alt="Описание моего изображения."
+/>
+```
+
+Компонент `<Image />` принимает следующие перечисленные свойства, а также [свойства адаптивного изображения](#свойства-адаптивного-изображения) в дополнение ко всем свойствам, принимаемым HTML-тегом `<img>`.
+
+#### `src` (обязательно)
+
+<p>
+
+**Тип:** <code><a href="#imagemetadata-1">ImageMetadata</a> | string | Promise\<\{ default: ImageMetadata \}\></code>
+</p>
+
+Формат значения `src` вашего файла изображения зависит от того, где расположен файл:
+
+- **Локальные изображения в `src/`** — вы также должны **импортировать изображение**, используя относительный путь к файлу, или настроить и использовать [псевдоним импорта](/ru/guides/imports/#aliases). Затем используйте имя импорта в качестве значения `src`:
+
+  ```astro title="src/pages/index.astro" "myImportedImage" "{myImportedImage}"
+  ---
+  import { Image } from 'astro:assets';
+  import myImportedImage from '../assets/my-local-image.png';
+  ---
+  <Image src={myImportedImage} alt="описательный текст" />
+  ```
+
+- **Изображения в папке `public/`** — используйте **путь к файлу изображения относительно папки public**:
+
+  ```astro title="src/pages/index.astro" '"/images/my-public-image.png"'
+  ---
+  import { Image } from 'astro:assets';
+  ---
+  <Image
+    src="/images/my-public-image.png"
+    alt="описательный текст"
+    width="200"
+    height="150"
+  />
+  ```
+
+- **Удаленные изображения** — используйте **полный URL** изображения в качестве значения свойства:
+
+  ```astro title="src/pages/index.astro" '"https://example.com/remote-image.jpg"'
+  ---
+  import { Image } from 'astro:assets';
+  ---
+  <Image
+    src="https://example.com/remote-image.jpg"
+    alt="описательный текст"
+    width="200"
+    height="150"
+  />
+  ```
+
+#### `alt` (обязательно)
+
+<p>
+
+**Тип:** `string`
+</p>
+
+Используйте обязательный атрибут `alt`, чтобы предоставить строку с [описательным альтернативным текстом](https://www.w3.org/WAI/tutorials/images/) для изображений.
+
+Если изображение является чисто декоративным (т.е. не способствует пониманию страницы), установите `alt=""`, чтобы скринридеры и другие вспомогательные технологии знали, что изображение нужно игнорировать.
+
+#### `width` и `height` (обязательно для изображений в `public/`)
+
+<p>
+
+**Тип:** ``number | `${number}` | undefined``
+</p>
+
+Эти свойства определяют размеры, используемые для изображения.
+
+Когда установлен тип `layout`, они генерируются автоматически на основе размеров изображения и в большинстве случаев не должны задаваться вручную.
+
+При использовании изображений в исходном соотношении сторон `width` и `height` необязательны. Эти размеры могут быть автоматически выведены из файлов изображений, расположенных в `src/`. Для удаленных изображений добавьте [атрибут `inferSize`, установленный в `true`](#infersize), в компонент `<Image />` или `<Picture />` или используйте функцию [`inferRemoteSize()`](#inferremotesize).
+
+Однако оба этих свойства обязательны для изображений, хранящихся в вашей папке `public/`, так как Astro не может анализировать эти файлы.
+
+#### `densities`
+
+<p>
+
+**Тип:** ``(number | `${number}x`)[] | undefined``<br />
+<Since v="3.3.0" />
+</p>
+
+Список плотностей пикселей для генерации изображения.
+
+Атрибут `densities` не совместим с [адаптивными изображениями](#свойства-адаптивного-изображения) с установленным пропом `layout` или конфигурацией `image.layout` и будет проигнорирован, если он задан.
+
+Если указано, это значение будет использоваться для генерации атрибута `srcset` в теге `<img>`. Не указывайте значение для `widths` при использовании этого значения.
+
+Плотности, которые соответствуют ширине больше оригинального изображения, будут проигнорированы, чтобы избежать увеличения масштаба изображения (апскейлинга).
+
+```astro title="src/components/MyComponent.astro"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png';
+---
+<Image
+  src={myImage}
+  width={myImage.width / 2}
+  densities={[1.5, 2]}
+  alt="Описание моего изображения."
+/>
+```
+
+```html
+<!-- Вывод -->
+<img
+  src="/_astro/my_image.hash.webp"
+  srcset="
+    /_astro/my_image.hash.webp 1.5x
+    /_astro/my_image.hash.webp 2x
+  "
+  alt="Описание моего изображения."
+  width="800"
+  height="450"
+  loading="lazy"
+  decoding="async"
+/>
+```
+
+#### `widths`
+
+<p>
+
+**Тип:** `number[] | undefined`<br />
+<Since v="3.3.0" />
+</p>
+
+Список значений ширины для генерации изображения.
+
+Если указано, это значение будет использоваться для генерации атрибута `srcset` в теге `<img>`. Также должно быть предоставлено [свойство `sizes`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/sizes).
+
+Атрибуты `widths` и `sizes` будут автоматически сгенерированы для адаптивных изображений, использующих свойство `layout`. Предоставление этих значений обычно не требуется, но может использоваться для переопределения любых автоматически сгенерированных значений.
+
+Не указывайте значение для `densities` при использовании этого значения. Только одно из этих двух значений может быть использовано для генерации `srcset`.
+
+Значения ширины, которые больше оригинального изображения, будут проигнорированы, чтобы избежать увеличения масштаба изображения.
+
+```astro title="src/components/MyComponent.astro"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png'; // Изображение 1600x900
+---
+<Image
+  src={myImage}
+  widths={[240, 540, 720, myImage.width]}
+  sizes={`(max-width: 360px) 240px, (max-width: 720px) 540px, (max-width: 1600px) 720px, ${myImage.width}px`}
+  alt="Описание моего изображения."
+/>
+```
+
+```html
+<!-- Вывод -->
+<img
+  src="/_astro/my_image.hash.webp"
+  srcset="
+    /_astro/my_image.hash.webp 240w,
+    /_astro/my_image.hash.webp 540w,
+    /_astro/my_image.hash.webp 720w,
+		/_astro/my_image.hash.webp 1600w
+  "
+  sizes="
+    (max-width: 360px) 240px,
+    (max-width: 720px) 540px,
+    (max-width: 1600px) 720px,
+    1600px
+  "
+  alt="Описание моего изображения."
+  width="1600"
+  height="900"
+  loading="lazy"
+  decoding="async"
+/>
+```
+
+#### `sizes`
+
+<p>
+
+**Тип:** `string | undefined`<br />
+<Since v="3.3.0" />
+</p>
+
+Указывает ширину макета изображения для каждого из списка медиа-условий. Должно быть предоставлено при указании `widths`.
+
+Атрибуты `widths` и `sizes` будут автоматически сгенерированы для адаптивных изображений, использующих свойство `layout`. Предоставление этих значений обычно не требуется, но может использоваться для переопределения любых автоматически сгенерированных значений.
+
+Сгенерированный атрибут `sizes` для изображений `constrained` и `full-width` основан на предположении, что изображение отображается почти во всю ширину экрана, когда область просмотра меньше ширины изображения. Если это существенно отличается (например, если изображение находится в многоколоночном макете на маленьких экранах), вам может потребоваться вручную настроить атрибут `sizes` для достижения наилучших результатов.
+
+#### `format`
+
+<p>
+
+**Тип:** <code><a href="#imageoutputformat">ImageOutputFormat</a> | undefined</code>
+</p>
+
+Вы можете опционально указать [тип файла изображения](https://developer.mozilla.org/en-US/docs/Web/Media/Formats/Image_types#common_image_file_types) для вывода.
+
+По умолчанию компонент `<Image />` создает файл `.webp`.
+
+#### `quality`
+
+<p>
+
+**Тип:** <code><a href="#imagequality">ImageQuality</a> | undefined</code>
+</p>
+
+`quality` — это необязательное свойство, которое может быть либо:
+- предустановкой (`low`, `mid`, `high`, `max`), которая автоматически нормализуется между форматами.
+- числом от `0` до `100` (интерпретируется по-разному в разных форматах).
+
+#### `inferSize`
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+<Since v="4.4.0" />
+</p>
+
+Позволяет автоматически установить оригинальные `width` и `height` удаленного изображения.
+
+По умолчанию это значение установлено в `false`, и вы должны вручную указать оба размера для вашего удаленного изображения.
+
+Добавьте `inferSize` в компонент `<Image />` (или `inferSize: true` в `getImage()`), чтобы вывести эти значения из содержимого изображения при получении. Это полезно, если вы не знаете размеров удаленного изображения или если они могут измениться:
+
+```astro title="src/components/MyComponent.astro" "inferSize"
+---
+import { Image } from 'astro:assets';
+---
+<Image src="https://example.com/cat.png" inferSize alt="Кошка спит на солнце." />
+```
+
+`inferSize` может получить размеры [удаленного изображения с домена, который не был авторизован](/ru/guides/images/#авторизация-удаленных-изображений), однако само изображение останется необработанным.
+
+#### `priority`
+
+<p>
+
+**Тип:** `boolean`<br />
+**По умолчанию:** `false`<br />
+<Since v="5.10.0" />
+</p>
+
+Позволяет автоматически устанавливать атрибуты `loading`, `decoding` и `fetchpriority` в их оптимальные значения для изображений, находящихся в верхней части страницы (above-the-fold).
+
+```astro title="src/components/MyComponent.astro" "priority"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png';
+---
+<Image src={myImage} priority alt="Описание моего изображения" />
+```
+
+Когда `priority="true"` (или сокращенный синтаксис `priority`) добавляется в компонент `<Image />` или `<Picture />`, он добавит следующие атрибуты, чтобы дать браузеру команду загрузить изображение немедленно:
+
+```html
+loading="eager"
+decoding="sync"
+fetchpriority="high"
+```
+
+Эти отдельные атрибуты все еще можно установить вручную, если вам нужно настроить их дополнительно.
+
+#### `background`
+
+<p>
+
+**Тип:** `string | undefined`<br />
+<Since v="5.17.0" />
+</p>
+
+Цвет фона для использования при сведении слоев изображения (flattening) для преобразования его в запрошенный выходной `format`.
+
+По умолчанию Sharp использует черный фон при сведении изображения. Указание другого цвета фона особенно полезно при преобразовании изображений с прозрачным фоном в формат, который не поддерживает прозрачность (например, `.jpeg`):
+
+```astro title="src/components/MyComponent.astro" "background"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png';
+---
+<Image
+  src={myImage}
+  alt="Описание моего изображения"
+  format="jpeg"
+  background="#ffffff"
+/>
+```
+
+Значения передаются непосредственно в сервис изображений. Sharp принимает [любое значение, которое может разобрать пакет `color-string`](https://github.com/Qix-/color-string/blob/master/README.md#parsing).
+
+### `<Picture />`
+
+<p><Since v="3.3.0" /></p>
+
+Компонент `<Picture />` генерирует оптимизированное изображение с несколькими форматами и/или размерами.
+
+Этот компонент также можно использовать для создания [адаптивных изображений](#свойства-адаптивного-изображения), которые могут подстраиваться под размер контейнера или размер и разрешение экрана устройства.
+
+```astro title="src/pages/index.astro"
+---
+import { Picture } from 'astro:assets';
+import myImage from "../assets/my_image.png"; // Изображение 1600x900
+---
+
+<!-- `alt` обязателен для компонента Picture -->
+<Picture src={myImage} formats={['avif', 'webp']} alt="Описание моего изображения." />
+```
+
+```html
+<!-- Вывод -->
+<picture>
+  <source srcset="/_astro/my_image.hash.avif" type="image/avif" />
+  <source srcset="/_astro/my_image.hash.webp" type="image/webp" />
+  <img
+    src="/_astro/my_image.hash.png"
+    width="1600"
+    height="900"
+    decoding="async"
+    loading="lazy"
+    alt="Описание моего изображения."
+  />
+</picture>
+```
+
+`<Picture />` принимает все свойства [компонента `<Image />`](#image-), включая [свойства адаптивного изображения](#свойства-адаптивного-изображения), плюс следующие:
+
+#### `formats`
+
+<p>
+
+**Тип:** <code><a href="#imageoutputformat">ImageOutputFormat</a>[]</code>
+</p>
+
+Массив форматов изображений для использования в тегах `<source>`. Записи будут добавлены как элементы `<source>` в том порядке, в котором они перечислены, и этот порядок определяет, какой формат будет отображаться. Для наилучшей производительности указывайте самый современный формат первым (например, `webp` или `avif`). По умолчанию установлено значение `['webp']`.
+
+#### `fallbackFormat`
+
+<p>
+
+**Тип:** [`ImageOutputFormat`](#imageoutputformat)
+</p>
+
+Формат, используемый в качестве запасного значения для тега `<img>`. По умолчанию `.png` для статических изображений (или `.jpg`, если изображение является JPG), `.gif` для анимированных изображений и `.svg` для файлов SVG.
+
+#### `pictureAttributes`
+
+<p>
+
+**Тип:** `HTMLAttributes<'picture'>`
+</p>
+
+Объект атрибутов, которые будут добавлены к тегу `<picture>`.
+
+Используйте это свойство для применения атрибутов к самому внешнему элементу `<picture>`. Атрибуты, примененные непосредственно к компоненту `<Picture />`, будут применяться к внутреннему элементу `<img>`, за исключением тех, которые используются для трансформации изображения.
+
+```astro title="src/components/MyComponent.astro"
+---
+import { Picture } from "astro:assets";
+import myImage from "../my_image.png"; // Изображение 1600x900
+---
+
+<Picture
+  src={myImage}
+  alt="Описание моего изображения."
+  pictureAttributes={{ style: "background-color: red;" }}
+/>
+```
+
+```html
+<!-- Вывод -->
+<picture style="background-color: red;">
+  <source srcset="/_astro/my_image.hash.webp" type="image/webp" />
+  <img
+    src="/_astro/my_image.hash.png"
+    alt="Описание моего изображения."
+    width="1600"
+    height="900"
+    loading="lazy"
+    decoding="async"
+  />
+</picture>
+```
+
+### Свойства адаптивного изображения
+
+Установка свойства [`layout`](#layout) на компоненте [`<Image />`](#image-) или [`<Picture />`](#picture-) создает адаптивное изображение и включает дополнительные настройки свойств.
+
+```astro title="src/components/MyComponent.astro"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png';
+---
+<Image src={myImage} alt="Описание моего изображения." layout='constrained' width={800} height={600} />
+```
+
+Когда задан макет (layout), атрибуты `srcset` и `sizes` генерируются автоматически на основе размеров изображения и типа макета. Предыдущий компонент `<Image />` сгенерирует следующий HTML-код:
+
+```html
+<img
+  src="/_astro/my_image.hash3.webp"
+  srcset="/_astro/my_image.hash1.webp 640w,
+       /_astro/my_image.hash2.webp 750w,
+       /_astro/my_image.hash3.webp 800w,
+       /_astro/my_image.hash4.webp 828w,
+       /_astro/my_image.hash5.webp 1080w,
+       /_astro/my_image.hash6.webp 1280w,
+       /_astro/my_image.hash7.webp 1600w"
+  alt="Описание моего изображения"
+  sizes="(min-width: 800px) 800px, 100vw"
+  loading="lazy"
+  decoding="async"
+  fetchpriority="auto"
+  width="800"
+  height="600"
+  style="--fit: cover; --pos: center;"
+  data-astro-image="constrained"
+>
+```
+Значение `layout` также определяет стили по умолчанию, применяемые к тегу `<img>`, чтобы определить, как изображение должно изменять размер в соответствии с его контейнером:
+
+```css title="Стили адаптивного изображения"
+:where([data-astro-image]) {
+	object-fit: var(--fit);
+	object-position: var(--pos);
+}
+:where([data-astro-image='full-width']) {
+	width: 100%;
+}
+:where([data-astro-image='constrained']) {
+	max-width: 100%;
+}
+```
+
+Вы можете переопределить стили `object-fit` и `object-position` по умолчанию, установив пропсы [`fit`](#fit) и [`position`](#position) в компоненте `<Image />` или `<Picture />`.
+
+##### `layout`
+
+<p>
+
+**Тип:** `'constrained' | 'full-width' | 'fixed' | 'none'` <br />
+**По умолчанию:** `image.layout | 'none'` <br />
+<Since v="5.10.0" />
+</p>
+
+Определяет [адаптивное изображение](#свойства-адаптивного-изображения) и то, как изображение должно изменять размер при изменении размера его контейнера. Может использоваться для переопределения значения по умолчанию, настроенного для [`image.layout`](/ru/reference/configuration-reference/#imagelayout).
+
+- `constrained` — Изображение будет уменьшаться, чтобы соответствовать контейнеру, сохраняя соотношение сторон, но не будет увеличиваться больше указанных `width` и `height` или оригинальных размеров изображения.
+
+  Используйте это, если вы хотите, чтобы изображение отображалось в запрошенном размере, где это возможно, но сжималось, чтобы поместиться на экранах меньшего размера. Это соответствует поведению по умолчанию для изображений при использовании Tailwind. Если вы не уверены, это, вероятно, тот макет, который вам следует выбрать.
+
+- `full-width` — Изображение будет масштабироваться, чтобы соответствовать ширине контейнера, сохраняя соотношение сторон.
+
+  Используйте это для hero-изображений или других изображений, которые должны занимать всю ширину страницы.
+
+- `fixed` — Изображение сохранит запрошенные размеры и не будет изменять размер. Оно сгенерирует `srcset` для поддержки дисплеев с высокой плотностью, но не для разных размеров экрана.
+
+  Используйте это, если изображение не будет менять размер, например, для иконок или логотипов меньше ширины любого экрана, или других изображений в контейнере фиксированной ширины.
+
+- `none` — Изображение не будет адаптивным. `srcset` или `sizes` не будут генерироваться автоматически, и стили не будут применяться.
+
+  Это полезно, если вы включили макет по умолчанию, но хотите отключить его для конкретного изображения.
+
+Например, если `constrained` установлен как макет по умолчанию, вы можете переопределить свойство `layout` любого отдельного изображения:
+
+```astro title="src/components/MyComponent.astro"
+---
+import { Image } from 'astro:assets';
+import myImage from '../assets/my_image.png';
+---
+<Image src={myImage} alt="Это будет использовать constrained макет" width={800} height={600} />
+<Image src={myImage} alt="Это будет использовать full-width макет" layout="full-width" />
+<Image src={myImage} alt="Это отключит адаптивность" layout="none" />
+```
+
+##### `fit`
+
+<p>
+
+**Тип:** `'contain' | 'cover' | 'fill' | 'none' | 'scale-down'` <br />
+**По умолчанию:** `image.objectFit | 'cover'` <br />
+<Since v="5.10.0" />
+</p>
+
+Включено, когда свойство [`layout`](#layout) установлено или настроено. Определяет, как адаптивное изображение должно быть обрезано, если его соотношение сторон изменено.
+
+Значения соответствуют значениям CSS `object-fit`. По умолчанию `cover` или значение [`image.objectFit`](/ru/reference/configuration-reference/#imageobjectfit), если оно установлено. Может использоваться для переопределения стилей `object-fit` по умолчанию.
+
+##### `position`
+
+<p>
+
+**Тип:** `string` <br />
+**По умолчанию:** `image.objectPosition | 'center'` <br />
+<Since v="5.10.0" />
+</p>
+
+Включено, когда свойство [`layout`](#layout) установлено или настроено. Определяет положение обрезки изображения для адаптивного изображения, если соотношение сторон изменено.
+
+Значения соответствуют значениям CSS `object-position`. По умолчанию `center` или значение [`image.objectPosition`](/ru/reference/configuration-reference/#imageobjectposition), если оно установлено. Может использоваться для переопределения стилей `object-position` по умолчанию.
+
+### `getImage()`
+
+<p>
+
+**Тип:** <code>(options: <a href="#unresolvedimagetransform">UnresolvedImageTransform</a>) => Promise\<<a href="#getimageresult">GetImageResult</a>\></code>
+</p>
+
+:::caution
+`getImage()` полагается на API, доступные только на сервере, и прерывает сборку при использовании на клиенте.
+:::
+
+Функция `getImage()` предназначена для генерации изображений, которые будут использоваться где-то еще, кроме как непосредственно в HTML, например, в [маршруте API](/ru/guides/endpoints/#серверные-эндпоинты-маршруты-api). Она также позволяет вам создать свой собственный пользовательский компонент `<Image />`.
+
+Она принимает объект опций с [теми же свойствами, что и компонент Image](#image-) (кроме `alt`) и возвращает [объект `GetImageResult`](#getimageresult).
+
+Следующий пример генерирует AVIF `background-image` для `<div />`:
+
+```astro title="src/components/Background.astro"
+---
+import { getImage } from "astro:assets";
+import myBackground from "../background.png"
+
+const optimizedBackground = await getImage({src: myBackground, format: 'avif'})
+---
+
+<div style={`background-image: url(${optimizedBackground.src});`}><slot /></div>
+```
+
+### `inferRemoteSize()`
+
+<p>
+
+**Тип:** <code>(url: string) => Promise\<Omit\<<a href="#imagemetadata-1">ImageMetadata</a>, 'src' | 'fsPath'\>\></code><br />
+<Since v="4.12.0" />
+</p>
+
+Функция для автоматической установки оригинальных `width` и `height` удаленного изображения. Может использоваться как альтернатива передаче свойства [`inferSize`](#infersize).
+
+```ts
+import { inferRemoteSize } from 'astro:assets';
+const { width, height } = await inferRemoteSize("https://example.com/cat.png");
+```
+
+### `getConfiguredImageService()`
+
+<p>
+
+**Тип:** <code>() => Promise\<<a href="#imageservice">ImageService</a>\></code><br />
+<Since v="2.1.3" />
+</p>
+
+Извлекает настроенный [сервис изображений](/ru/reference/configuration-reference/#imageservice).
+
+### `imageConfig`
+
+<p>
+
+**Тип:** [`AstroConfig["image"]`](/ru/reference/configuration-reference/#image-options)<br />
+<Since v="3.0.9" />
+</p>
+
+[Параметры конфигурации для изображений](/ru/reference/configuration-reference/#image-options), установленные пользователем и объединенные со всеми значениями по умолчанию.
+
+## Типы `astro:assets`
+
+Следующие типы импортируются из виртуального модуля `astro:assets`:
+
+```ts
+import type {
+  LocalImageProps,
+  RemoteImageProps,
+} from "astro/assets";
+```
+
+### `LocalImageProps`
+
+<p>
+
+**Тип:** <code>ImageSharedProps\<T\> & \{ src: <a href="#imagemetadata-1">ImageMetadata</a> | Promise\<\{ default: ImageMetadata; \}\> }</code>
+</p>
+
+Описывает [свойства локального изображения](#image-). Это гарантирует, что [`src`](#src-обязательно) соответствует форме импортированного изображения.
+
+<ReadMore>Узнайте больше об [импортированных изображениях в `src/`](/ru/guides/images/#изображения-в-src) с примером использования.</ReadMore>
+
+### `RemoteImageProps`
+
+<p>
+
+**Типы:**
+* `ImageSharedProps<T> & { src: string; inferSize: true; }`
+* `ImageSharedProps<T> & { src: string; inferSize?: false | undefined; }`
+</p>
+
+Описывает [свойства удаленного изображения](#image-). Это гарантирует, что когда [`inferSize`](#infersize) не предоставлено или установлено в `false`, оба свойства [`width` и `height`](#width-и-height-обязательно-для-изображений-в-public) обязательны.
+
+## Импорт из `astro/assets`
+
+Следующие помощники импортируются из обычного модуля `astro/assets`:
+
+```ts
+import {
+  baseService,
+  getConfiguredImageService,
+  getImage,
+  isLocalService,
+} from "astro/assets";
+```
+
+### `baseService`
+
+<p>
+
+**Тип:** <code>Omit\<<a href="#localimageservice">LocalImageService</a>, 'transform'\></code>
+</p>
+
+Встроенный локальный сервис изображений, который можно расширить для [создания пользовательского сервиса изображений](/ru/reference/image-service-reference/).
+
+Следующий пример повторно использует `baseService` для создания нового сервиса изображений:
+
+```ts title="src/image-service.ts"
+import { baseService } from "astro/assets";
+
+const newImageService = {
+ getURL: baseService.getURL,
+ parseURL: baseService.parseURL,
+ getHTMLAttributes: baseService.getHTMLAttributes,
+ async transform(inputBuffer, transformOptions) {...}
+}
+```
+
+### `getConfiguredImageService()`
+
+Смотрите [`getConfiguredImageService()`](#getconfiguredimageservice) из `astro:assets`.
+
+### `getImage()`
+
+<p>
+
+**Тип:** <code>(options: <a href="#unresolvedimagetransform">UnresolvedImageTransform</a>, imageConfig: <a href="/ru/reference/configuration-reference/#image-options">AstroConfig['image']</a>) => Promise\<<a href="#getimageresult">GetImageResult</a>\></code>
+</p>
+
+Функция, похожая на [`getImage()`](#getimage) из `astro:assets`, с двумя обязательными аргументами: объект `options` с [теми же свойствами, что и у компонента Image](#image-), и второй объект для [конфигурации изображений](/ru/reference/configuration-reference/#image-options).
+
+### `isLocalService()`
+
+<p>
+
+**Тип:** <code>(service: <a href="#imageservice">ImageService</a> | undefined) => boolean</code>
+</p>
+
+Проверяет тип сервиса изображений и возвращает `true`, когда это [локальный сервис](#localimageservice).
+
+## Типы `astro/assets`
+
+Следующие типы импортируются из обычного модуля `astro/assets`:
+
+```ts
+import type {
+  LocalImageProps,
+  RemoteImageProps,
+} from "astro/assets";
+```
+
+### `LocalImageProps`
+
+Смотрите [`LocalImageProps`](#localimageprops) из `astro:assets`.
+
+### `RemoteImageProps`
+
+Смотрите [`RemoteImageProps`](#remoteimageprops) из `astro:assets`.
+
+## Импорт из `astro/assets/utils`
+
+Следующие помощники импортируются из директории `utils` обычного модуля `astro/assets` и могут быть использованы для [создания сервиса изображений](/ru/reference/image-service-reference/):
+
+```ts
+import { 
+  isRemoteAllowed,
+  matchHostname,
+  matchPathname,
+  matchPattern,
+  matchPort,
+  matchProtocol,
+  isESMImportedImage,
+  isRemoteImage,
+  resolveSrc,
+  imageMetadata,
+  emitImageMetadata,
+  getOrigQueryParams,
+  inferRemoteSize,
+  propsToFilename,
+  hashTransform,
+  /* Следующие являются устаревшими: */
+  emitESMImage,
+} from "astro/assets/utils";
+```
+
+### `isRemoteAllowed()`
+
+<p>
+
+**Тип:** <code>(src: string, \{ domains, remotePatterns \}: \{ domains: string[], remotePatterns: <a href="#remotepattern">RemotePattern</a>[] \}) => boolean</code><br />
+<Since v="4.0.0" />
+</p>
+
+Определяет, разрешен ли данный удаленный ресурс, идентифицируемый по его исходному URL, на основе указанных доменов и удаленных шаблонов.
+
+```ts
+import { isRemoteAllowed } from 'astro/assets/utils';
+
+const url = new URL('https://example.com/images/test.jpg');
+const domains = ['example.com', 'anotherdomain.com'];
+const remotePatterns = [
+  {
+    protocol: 'https',
+    hostname: 'images.example.com',
+    pathname: '/**', // Разрешить любой путь под этим именем хоста
+  }
+];
+
+isRemoteAllowed(url.href, { domains, remotePatterns }); // Вывод: `true`
+```
+
+### `matchHostname()`
+
+<p>
+
+**Тип:** `(url: URL, hostname?: string, allowWildcard = false) => boolean`<br />
+<Since v="4.0.0" />
+</p>
+
+Сопоставляет имя хоста заданного URL с указанным именем хоста, с опциональной поддержкой шаблонов подстановки (wildcard).
+
+```ts
+import { matchHostname } from 'astro/assets/utils';
+
+const url = new URL('https://sub.example.com/path/to/resource');
+
+matchHostname(url, 'example.com'); // Вывод: `false`
+matchHostname(url, 'example.com', true); // Вывод: `true`
+```
+
+### `matchPathname()`
+
+<p>
+
+**Тип:** `(url: URL, pathname?: string, allowWildcard = false) => boolean`<br />
+<Since v="4.0.0" />
+</p>
+
+Сопоставляет путь заданного URL с указанным шаблоном, с опциональной поддержкой подстановок.
+
+```ts
+import { matchPathname } from 'astro/assets/utils';
+
+const testURL = new URL('https://example.com/images/photo.jpg');
+
+matchPathname(testURL, '/images/photo.jpg'); // Вывод: `true`
+matchPathname(testURL, '/images/'); // Вывод: `false`
+matchPathname(testURL, '/images/*', true); // Вывод: `true`
+```
+
+### `matchPattern()`
+
+<p>
+
+**Тип:** <code>(url: URL, remotePattern: <a href="#remotepattern">RemotePattern</a>) => boolean</code><br />
+<Since v="4.0.0" />
+</p>
+
+Оценивает, соответствует ли заданный URL указанному удаленному шаблону на основе протокола, имени хоста, порта и пути.
+
+```ts
+import { matchPattern } from 'astro/assets/utils';
+
+const url = new URL('https://images.example.com/photos/test.jpg');
+const remotePattern = {
+  protocol: 'https',
+  hostname: 'images.example.com',
+  pathname: '/photos/**', // Разрешить все файлы в /photos/
+};
+
+matchPattern(url, remotePattern); // Вывод: `true`
+```
+
+### `matchPort()`
+
+<p>
+
+**Тип:** `(url: URL, port?: string) => boolean`<br />
+**По умолчанию:** `true`<br />
+<Since v="4.0.0" />
+</p>
+
+Проверяет, соответствует ли порт заданного URL указанному порту. Если порт не указан, возвращает `true`.
+
+```ts
+import { matchPort } from 'astro/assets/utils';
+
+const urlWithPort = new URL('https://example.com:8080/resource');
+const urlWithoutPort = new URL('https://example.com/resource');
+
+matchPort(urlWithPort, '8080'); // Вывод: `true`
+matchPort(urlWithoutPort, '8080'); // Вывод: `false`
+```
+
+### `matchProtocol()`
+
+<p>
+
+**Тип:** `(url: URL, protocol?: string) => boolean`<br />
+**По умолчанию:** `true`<br />
+<Since v="4.0.0" />
+</p>
+
+Сравнивает протокол предоставленного URL с указанным протоколом. Возвращает `true`, если протокол совпадает или если протокол не указан.
+
+```ts
+import { matchProtocol } from 'astro/assets/utils';
+
+const secureUrl = new URL('https://example.com/resource');
+const regularUrl = new URL('http://example.com/resource');
+
+matchProtocol(secureUrl, 'https'); // Вывод: `true`
+matchProtocol(regularUrl, 'https'); // Вывод: `false`
+```
+
+### `isESMImportedImage()`
+
+<p>
+
+**Тип:** <code>(src: <a href="#imagemetadata-1">ImageMetadata</a> | string) => boolean</code><br />
+<Since v="4.0.0" />
+</p>
+
+Определяет, является ли данный источник изображением, импортированным через ECMAScript Module (ESM).
+
+### `isRemoteImage()`
+
+<p>
+
+**Тип:** <code>(src: <a href="#imagemetadata-1">ImageMetadata</a> | string) => boolean</code><br />
+<Since v="4.0.0" />
+</p>
+
+Определяет, является ли предоставленный источник URL-адресом удаленного изображения в виде строки.
+
+### `resolveSrc()`
+
+<p>
+
+**Тип:** <code>(src: <a href="#src-2">UnresolvedImageTransform['src']</a>) => Promise\<string | <a href="#imagemetadata-1">ImageMetadata</a>\></code><br />
+<Since v="4.0.0" />
+</p>
+
+Возвращает источник изображения. Эта функция гарантирует, что если `src` является Promise (например, динамический `import()`), он будет ожидаться, и будет извлечен правильный `src`. Если `src` уже является разрешенным значением, он возвращается как есть.
+
+### `imageMetadata()`
+
+<p>
+
+**Тип:** <code>(data: Uint8Array, src?: string) => Promise\<Omit\<<a href="#imagemetadata-1">ImageMetadata</a>, 'src' | 'fsPath'\>\></code><br />
+<Since v="4.0.0" />
+</p>
+
+Извлекает метаданные изображения, такие как размеры, формат и ориентация, из предоставленных данных изображения.
+
+### `emitImageMetadata()`
+
+<p>
+
+**Тип:** <code>(id: string | undefined, fileEmitter?: Rollup.EmitFile) => Promise\<(<a href="#imagemetadata-1">ImageMetadata</a> & \{ contents?: Buffer \}) | undefined\></code><br />
+<Since v="5.7.0" />
+</p>
+
+Обрабатывает файл изображения и выдает его метаданные и, опционально, его содержимое. В режиме сборки функция использует `fileEmitter` для генерации ссылки на актив. В режиме разработки она разрешается в локальный URL-адрес файла с параметрами запроса для метаданных.
+
+### `getOrigQueryParams()`
+
+<p>
+
+**Тип:** <code>(params: URLSearchParams) => Pick\<<a href="#imagemetadata-1">ImageMetadata</a>, 'width' | 'height' | 'format'\> | undefined</code><br />
+<Since v="4.0.0" />
+</p>
+
+Извлекает `width`, `height` и `format` изображения из [объекта `URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams). Если какой-либо из этих параметров отсутствует или недействителен, функция возвращает `undefined`.
+
+### `inferRemoteSize()`
+
+<p>
+
+**Тип:** <code>(url: string) => Promise\<Omit\<<a href="#imagemetadata-1">ImageMetadata</a>, 'src' | 'fsPath'\>\></code><br />
+<Since v="4.0.0" />
+</p>
+
+Выводит размеры удаленного изображения путем потоковой передачи его данных и анализа их по мере поступления до тех пор, пока не будет доступно достаточно метаданных.
+
+### `propsToFilename()`
+
+<p>
+
+**Тип:** <code>(filePath: string, transform: <a href="#imagetransform">ImageTransform</a>, hash: string) => string</code><br />
+<Since v="4.0.0" />
+</p>
+
+Генерирует отформатированное имя файла для изображения на основе его исходного пути, свойств трансформации и уникального хеша.
+
+Отформатированное имя файла следует этой структуре:
+
+`<prefixDirname>/<baseFilename>_<hash><outputExtension>`
+
+- `prefixDirname`: Если изображение является импортированным ESM-изображением, это имя каталога исходного пути файла; в противном случае это будет пустая строка.
+- `baseFilename`: Базовое имя файла или хешированное короткое имя, если файл является `data:` URI.
+- `hash`: Уникальная строка хеша, сгенерированная для различения преобразованного файла.
+- `outputExtension`: Желаемое расширение выходного файла, полученное из `transform.format` или исходного расширения файла.
+
+```ts
+import { propsToFilename } from 'astro/assets/utils';
+
+const filePath = '/images/photo.jpg';
+const transform = { format: 'png', src: filePath };
+const hash = 'abcd1234';
+
+const filename = propsToFilename(filePath, transform, hash);
+// Пример значения: '/images/photo_abcd1234.png'
+```
+
+### `hashTransform()`
+
+<p>
+
+**Тип:** <code>(transform: <a href="#imagetransform">ImageTransform</a>, imageService: string, propertiesToHash: string[]) => string</code><br />
+<Since v="4.0.0" />
+</p>
+
+Преобразует предоставленный объект `transform` в строку хеша на основе выбранных свойств и указанного `imageService`.
+
+```ts
+import { hashTransform } from 'astro/assets/utils';
+
+const transform = {
+  src: '/images/photo.jpg',
+  width: 800,
+  height: 600,
+  format: 'jpg',
+};
+const imageService = 'astro/assets/services/sharp';
+const propertiesToHash = ['width', 'height', 'format'];
+
+const hash = hashTransform(transform, imageService, propertiesToHash);
+// Пример значения: 'd41d8cd98f00b204e9800998ecf8427e'
+```
+
+### `emitESMImage()`
+
+:::caution[Устарело]
+Вместо этого используйте функцию [`emitImageMetadata`](#emitimagemetadata).
+:::
+
+<p>
+
+**Тип:** <code>(id: string | undefined, _watchMode: boolean, experimentalSvgEnabled: boolean,  fileEmitter?: Rollup.EmitFile) => Promise\<(<a href="#imagemetadata-1">ImageMetadata</a> & \{ contents?: Buffer \}) | undefined\></code><br />
+<Since v="4.0.0" />
+</p>
+
+
+Обрабатывает файл изображения и выдает его метаданные и, опционально, его содержимое. В режиме сборки функция использует `fileEmitter` для генерации ссылки на актив. В режиме разработки она разрешается в локальный URL-адрес файла с параметрами запроса для метаданных.
+
+## Типы `astro`
+
+```ts
+import type {
+  GetImageResult,
+  ImageTransform,
+  UnresolvedImageTransform,
+  ImageMetadata,
+  ImageInputFormat,
+  ImageOutputFormat,
+  ImageQuality,
+  ImageQualityPreset,
+  RemotePattern,
+  ImageService,
+  ExternalImageService,
+  LocalImageService,
+  ImageServiceConfig,
+} from "astro";
+```
+
+### `GetImageResult`
+
+<p>
+
+**Тип:** `object`<br />
+<Since v="2.2.0" />
+</p>
+
+Описывает результат трансформации после вызова [`getImage()`](/ru/reference/modules/astro-assets/#getimage).
+
+#### `attributes`
+
+<p>
+
+**Тип:** `Record<string, any>`
+</p>
+
+Определяет дополнительные HTML-атрибуты, необходимые для рендеринга изображения (например, width, height, style).
+
+#### `options`
+
+<p>
+
+**Тип:** [`ImageTransform`](#imagetransform)
+</p>
+
+Описывает настройки трансформации после валидации.
+
+#### `rawOptions`
+
+<p>
+
+**Тип:** [`ImageTransform`](#imagetransform)
+</p>
+
+Описывает оригинальные настройки трансформации.
+
+#### `src`
+
+<p>
+
+**Тип:** `string`
+</p>
+
+Путь к сгенерированному изображению.
+
+#### `srcSet`
+
+<p>
+
+**Тип:** <code>\{ values: \{ transform: <a href="#imagetransform">ImageTransform</a>; descriptor?: string; attributes?: Record\<string, any\>; url: string; \}[]; attribute: string; \}</code><br />
+<Since v="3.3.0" />
+</p>
+
+Объект, описывающий, как рендерить [атрибут `srcset`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img#srcset).
+
+##### `values`
+
+<p>
+
+**Тип:** <code>\{ transform: <a href="#imagetransform">ImageTransform</a>; descriptor?: string; attributes?: Record\<string, any\>; url: string; \}[]</code>
+</p>
+
+Массив сгенерированных значений, где каждая запись включает URL и дескриптор размера. Это можно использовать для ручной генерации значения атрибута `srcset`.
+
+##### `attribute`
+
+<p>
+
+**Тип:** `string`
+</p>
+
+Значение, готовое к использованию в атрибуте `srcset`.
+
+### `ImageTransform`
+
+<p>
+
+**Тип:** `object`
+</p>
+
+Определяет опции, принимаемые сервисом трансформации изображений. Содержит обязательное свойство `src`, необязательные предопределенные свойства и любые дополнительные свойства, требуемые сервисом изображений:
+
+#### `src`
+
+<p>
+
+**Тип:** <code><a href="#imagemetadata-1">ImageMetadata</a> | string</code>
+</p>
+
+Определяет путь к локальному изображению в директории `public`, URL удаленного изображения или данные импортированного изображения.
+
+#### `width`
+
+<p>
+
+**Тип:** `number | undefined`
+</p>
+
+Ширина изображения.
+
+#### `height`
+
+<p>
+
+**Тип:** `number | undefined`
+</p>
+
+Высота изображения.
+
+#### `widths`
+
+<p>
+
+**Тип:** `number[] | undefined`<br />
+<Since v="3.3.0" />
+</p>
+
+Список ширин для генерации изображения.
+
+#### `densities`
+
+<p>
+
+**Тип:** ``(number | `${number}x`)[] | undefined``<br />
+<Since v="3.3.0" />
+</p>
+
+Список плотностей пикселей для генерации изображения.
+
+#### `quality`
+
+<p>
+
+**Тип:** <code><a href="#imagequality">ImageQuality</a> | undefined</code>
+</p>
+
+Желаемое качество выходного изображения.
+
+#### `format`
+
+<p>
+
+**Тип:** <code><a href="#imageoutputformat">ImageOutputFormat</a> | undefined</code>
+</p>
+
+Желаемый формат выходного изображения.
+
+#### `fit`
+
+<p>
+
+**Тип:** `'fill' | 'contain' | 'cover' | 'none' | 'scale-down' | string | undefined`<br />
+<Since v="5.0.0" />
+</p>
+
+Определяет список допустимых значений для CSS-свойства `object-fit`, расширяемый любой строкой.
+
+#### `position`
+
+<p>
+
+**Тип:** `string | undefined`<br />
+<Since v="5.0.0" />
+</p>
+
+Управляет значением для CSS-свойства `object-position`.
+
+### `UnresolvedImageTransform`
+
+<p>
+
+**Тип:** <code>Omit\<<a href="#imagetransform">ImageTransform</a>, "src"\> & \{ src: <a href="#imagemetadata-1">ImageMetadata</a> | string | Promise\<\{ default: ImageMetadata \}\>; inferSize?: boolean; \}</code>
+</p>
+
+Представляет изображение с опциями трансформации. Содержит те же свойства, что и [тип `ImageTransform`](#imagetransform), но с другим типом `src` и дополнительным свойством `inferSize`.
+
+#### `src`
+
+<p>
+
+**Тип:** <code><a href="#imagemetadata-1">ImageMetadata</a> | string | Promise\<\{ default: ImageMetadata \}\></code>
+</p>
+
+Путь к изображению, импортированному или расположенному в директории `public`, или URL удаленного изображения.
+
+#### `inferSize`
+
+<p>
+
+**Тип:** `boolean`
+</p>
+
+Определяет, должны ли быть выведены ширина и высота изображения.
+
+<ReadMore>Смотрите также [атрибут `inferSize`](/ru/reference/modules/astro-assets/#infersize), доступный в `<Image />`.</ReadMore>
+
+### `ImageMetadata`
+
+<p>
+
+**Тип:** <code>\{ src: string; width: number; height: number; format: <a href="#imageinputformat">ImageInputFormat</a>; orientation?: number; \}</code><br />
+<Since v="2.1.3" />
+</p>
+
+Описывает данные, собранные во время импорта изображения. Содержит следующие свойства:
+
+#### `src`
+
+<p>
+
+**Тип:** `string`
+</p>
+
+Абсолютный путь к изображению в файловой системе.
+
+#### `width`
+
+<p>
+
+**Тип:** `number`
+</p>
+
+Ширина изображения.
+
+#### `height`
+
+<p>
+
+**Тип:** `number`
+</p>
+
+Высота изображения.
+
+#### `format`
+
+<p>
+
+**Тип:** [`ImageInputFormat`](#imageinputformat)
+</p>
+
+Формат изображения.
+
+#### `orientation`
+
+<p>
+
+**Тип:** `number`<br />
+<Since v="2.8.3" />
+</p>
+
+Ориентация изображения, если его метаданные содержат эту информацию.
+
+### `ImageInputFormat`
+
+<p>
+
+**Тип:** `"jpeg" | "jpg" | "png" | "tiff" | "webp" | "gif" | "svg" | "avif"`<br />
+<Since v="2.2.0" />
+</p>
+
+Описывает объединение поддерживаемых форматов для импортированных изображений.
+
+### `ImageOutputFormat`
+
+<p>
+
+**Тип:** `string | "jpeg" | "jpg" | "png" | "webp" | "svg" | "avif"`<br />
+<Since v="2.2.0" />
+</p>
+
+Указывает формат для выходных изображений. Это может быть предопределенный литерал или любая строка.
+
+### `ImageQuality`
+
+<p>
+
+**Тип:** <code><a href="#imagequalitypreset">ImageQualityPreset</a> | number</code><br />
+<Since v="2.2.0" />
+</p>
+
+Представляет воспринимаемое качество выходного изображения как объединение предопределенных литералов, строки или числа.
+
+### `ImageQualityPreset`
+
+<p>
+
+**Тип:** `string | "low" | "mid" | "high" | "max"`<br />
+<Since v="2.2.0" />
+</p>
+
+Определяет доступные пресеты для управления качеством изображения, расширяемые любой строкой.
+
+### `RemotePattern`
+
+<p>
+
+**Тип:** `{ hostname?: string; pathname?: string; protocol?: string; port?: string; }`<br />
+<Since v="5.14.2" />
+</p>
+
+Описывает удаленный хост через четыре необязательных свойства: `hostname`, `pathname`, `protocol` и `port`.
+
+### `ImageService`
+
+<p>
+
+**Тип:** <code><a href="#externalimageservice">ExternalImageService</a> | <a href="#localimageservice">LocalImageService</a></code>
+</p>
+
+Определяет хуки, которые должен предоставлять локальный или внешний сервис изображений.
+
+### `ExternalImageService`
+
+<p>
+
+**Тип:** `object`
+</p>
+
+Определяет хуки, которые должен предоставлять внешний сервис трансформации изображений. Требует [хук `getUrl()`](/ru/reference/image-service-reference/#geturl) и поддерживает [три дополнительных хука](/ru/reference/image-service-reference/#хуки).
+
+<ReadMore>Узнайте, как создавать [внешние сервисы](/ru/reference/image-service-reference/#внешние-сервисы) в справочнике API Image Service с примерами использования.</ReadMore>
+
+### `LocalImageService`
+
+<p>
+
+**Тип:** `object`
+</p>
+
+Определяет хуки, которые должен предоставлять локальный сервис трансформации изображений. Требует хуки [`getUrl()`](/ru/reference/image-service-reference/#geturl), [`parseUrl()`](/ru/reference/image-service-reference/#parseurl) и [`transform()`](/ru/reference/image-service-reference/#transform), а также поддерживает [дополнительные хуки](/ru/reference/image-service-reference/#хуки).
+
+<ReadMore>Узнайте, как создавать [локальные сервисы](/ru/reference/image-service-reference/#локальные-сервисы) в справочнике API Image Service с примерами использования.</ReadMore>
+
+### `ImageServiceConfig`
+
+<p>
+
+**Тип:** `{ entrypoint: 'astro/assets/services/sharp' | string; config?: T; }`<br />
+<Since v="2.3.3" />
+</p>
+
+Описывает объект конфигурации для сервиса изображений. Содержит следующие свойства:
+
+#### `entrypoint`
+
+<p>
+
+**Тип:** `'astro/assets/services/sharp' | string`
+</p>
+
+Пакет или путь к модулю сервиса изображений. Это может быть встроенный сервис Sharp в Astro или сторонний сервис.
+
+#### `config`
+
+<p>
+
+**Тип:** `Record<string, any>`
+</p>
+
+Объект конфигурации, передаваемый в сервис изображений. Форма зависит от конкретного используемого сервиса.

@@ -21,11 +21,11 @@ import ReadMore from '~/components/ReadMore.astro';
 - [`build.format`](/ru/reference/configuration-reference/#buildformat)
 - [`site`](/ru/reference/configuration-reference/#site)
 
-Также обратите внимание, что URL-адреса, созданные этими функциями для вашей `defaultLocale`, будут отражать вашу конфигурацию `i18n.routing`.
+Также обратите внимание, что URL-адреса, созданные этими функциями для вашей `defaultLocale` (локаль по умолчанию), будут отражать вашу конфигурацию `i18n.routing`.
 
-Для ознакомления с функциями и примерами использования [смотрите наше руководство по i18n-маршрутизации](/ru/guides/internationalization/).
+Информацию о функциях и примеры использования [смотрите в нашем руководстве по маршрутизации i18n](/ru/guides/internationalization/).
 
-## Импорты из `astro:i18n`
+## Импорт из `astro:i18n`
 
 ```js
 import { 
@@ -40,6 +40,10 @@ import {
   notFound,
   middleware,
   requestHasLocale,
+  normalizeTheLocale,
+  pathHasLocale,
+  toCodes,
+  toPaths
  } from 'astro:i18n';
 ```
 
@@ -85,7 +89,7 @@ getRelativeLocaleUrl("fr_CA", "getting-started", {
 **Тип:** `(locale: string, path?: string, options?: GetLocaleOptions) => string`
 </p>
 
-Используйте эту функцию для получения абсолютного пути для локали, когда [`site`] имеет значение. Если [`site`] не настроен, функция вернет относительный URL. Если локаль не существует, Astro выдаст ошибку.
+Используйте эту функцию для получения абсолютного пути для локали, когда [`site`] имеет значение. Если [`site`] не настроен, функция возвращает относительный URL. Если локаль не существует, Astro выдаст ошибку.
 
 
 ```astro title="src/pages/index.astro"
@@ -115,7 +119,7 @@ getAbsoluteLocaleUrl("fr_CA", "getting-started", {
 // возвращает https://example.com/blog/fr_CA/getting-started
 ---
 ```
-
+ 
 ### `getRelativeLocaleUrlList()` 
 
 <p>
@@ -123,7 +127,7 @@ getAbsoluteLocaleUrl("fr_CA", "getting-started", {
 **Тип:** `(path?: string, options?: GetLocaleOptions) => string[]`
 </p>
 
-Используйте эту функцию аналогично [`getRelativeLocaleUrl`](#getrelativelocaleurl), чтобы получить список относительных путей для всех доступных в проекте локалей.
+Используйте это аналогично [`getRelativeLocaleUrl`](#getrelativelocaleurl), чтобы вернуть список относительных путей для всех локалей.
 
 
 ### `getAbsoluteLocaleUrlList()` 
@@ -133,7 +137,7 @@ getAbsoluteLocaleUrl("fr_CA", "getting-started", {
 **Тип:** `(path?: string, options?: GetLocaleOptions) => string[]`
 </p>
 
-Используйте эту функцию аналогично [`getAbsoluteLocaleUrl`](/ru/guides/internationalization/#пользовательские-пути-локалей), чтобы получить список абсолютных путей для всех доступных в проекте локалей.
+Используйте это аналогично [`getAbsoluteLocaleUrl`](/ru/guides/internationalization/#пользовательские-пути-локалей), чтобы вернуть список абсолютных путей для всех локалей.
 
 ### `getPathByLocale()` 
 
@@ -142,7 +146,7 @@ getAbsoluteLocaleUrl("fr_CA", "getting-started", {
 **Тип:** `(locale: string) => string`
 </p>
 
-Функция, которая возвращает `path`, связанный с одним или несколькими `codes`, когда настроены [пользовательские пути локалей](/ru/guides/internationalization/#пользовательские-пути-локалей).
+Функция, которая возвращает `path` (путь), связанный с одним или несколькими `codes` (кодами), когда настроены [пользовательские пути локалей](/ru/guides/internationalization/#пользовательские-пути-локалей).
 
 ```js title="astro.config.mjs"
 export default defineConfig({
@@ -171,7 +175,7 @@ getPathByLocale("fr-CA"); // возвращает "french"
 **Тип:** `(path: string) => string`
 </p>
 
-Функция, которая возвращает `code`, связанный с путем локали `path`.
+Функция, которая возвращает `code` (код), связанный с `path` (путем) локали.
 
 ```js title="astro.config.mjs"
 export default defineConfig({
@@ -188,7 +192,7 @@ export default defineConfig({
 ---
 import { getLocaleByPath } from 'astro:i18n';
 
-getLocaleByPath("french"); // возвращает "fr", поскольку это первый настроенный код
+getLocaleByPath("french"); // возвращает "fr", так как это первый настроенный код
 ---
 ```
 
@@ -201,10 +205,10 @@ getLocaleByPath("french"); // возвращает "fr", поскольку эт
 </p>
 
 :::note
-Доступно только когда `i18n.routing` установлен в значение `"manual"`
+Доступно только когда `i18n.routing` установлено в `"manual"`
 :::
 
-Функция, которая возвращает `Response` с перенаправлением на настроенную `defaultLocale`. Она принимает необязательный валидный код статуса для перенаправления.
+Функция, возвращающая `Response`, который перенаправляет на настроенную `defaultLocale` (локаль по умолчанию). Она принимает необязательный валидный код статуса перенаправления.
 
 ```js title="middleware.js"
 import { defineMiddleware } from "astro:middleware";
@@ -228,10 +232,10 @@ export const onRequest = defineMiddleware((context, next) => {
 </p>
 
 :::note
-Доступно только когда `i18n.routing` установлен в значение `"manual"`
+Доступно только когда `i18n.routing` установлено в `"manual"`
 :::
 
-Функция для использования резервных локалей [`i18n.fallback`](/ru/reference/configuration-reference/#i18nfallback) в вашем собственном мидлваре.
+Функция, которая позволяет использовать вашу [конфигурацию `i18n.fallback`](/ru/reference/configuration-reference/#i18nfallback) в вашем собственном middleware.
 
 ```js title="middleware.js"
 import { defineMiddleware } from "astro:middleware";
@@ -255,14 +259,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
 </p>
 
 :::note
-Доступно только когда `i18n.routing` установлен в значение `"manual"`
+Доступно только когда `i18n.routing` установлено в `"manual"`
 :::
 
-Используйте эту функцию в мидлваре маршрутизации для возврата 404 в случаях, когда:
-- путь не является корневым (например, `/` или `/<base>`)
+Используйте эту функцию в вашем middleware маршрутизации для возврата 404, когда:
+- текущий путь не является корневым (например `/` или `/<base>`)
 - URL не содержит локаль
 
-Если в функцию передается объект `Response`, новый `Response`, созданный этой функцией, будет содержать те же заголовки, что и исходный ответ.
+Когда передается `Response`, новый `Response`, создаваемый этой функцией, будет содержать те же заголовки, что и исходный ответ.
 
 ```js title="middleware.js"
 import { defineMiddleware } from "astro:middleware";
@@ -286,12 +290,12 @@ export const onRequest = defineMiddleware((context, next) => {
 </p>
 
 :::note
-Доступно только когда `i18n.routing` установлен в значение `"manual"`
+Доступно только когда `i18n.routing` установлено в `"manual"`
 :::
 
-Функция, которая позволяет программно создать мидлвар Astro i18n.
+Функция, которая позволяет программно создать middleware Astro i18n.
 
-Это полезно, когда вы хотите использовать стандартную логику i18n, но добавить несколько исключений для вашего сайта.
+Это полезно, когда вы все еще хотите использовать логику i18n по умолчанию, но добавить лишь несколько исключений для вашего сайта.
 
 ```js title="middleware.js"
 import { middleware } from "astro:i18n";
@@ -300,8 +304,8 @@ import { sequence, defineMiddleware } from "astro:middleware";
 const customLogic = defineMiddleware(async (context, next) => {
   const response = await next();
 
-  // Пользовательская логика после получения ответа.
-  // Можно перехватить ответ, приходящий от мидлвара Astro i18n.
+  // Пользовательская логика после разрешения ответа.
+  // Можно перехватить ответ, поступающий от middleware Astro i18n.
 
   return response;
 });
@@ -321,10 +325,10 @@ export const onRequest = sequence(customLogic, middleware({
 </p>
 
 :::note
-Доступно только когда `i18n.routing` установлен в значение `"manual"`
+Доступно только когда `i18n.routing` установлено в `"manual"`
 :::
 
-Проверяет, содержит ли текущий URL настроенную локаль. Внутри эта функция использует `APIContext#url.pathname`.
+Проверяет, содержит ли текущий URL настроенную локаль. Внутренне эта функция будет использовать `APIContext#url.pathname`.
 
 ```js title="middleware.js"
 import { defineMiddleware } from "astro:middleware";
@@ -336,4 +340,117 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
   return new Response("Not found", { status: 404 });
 })
+```
+
+### `normalizeTheLocale()`
+
+<p>
+
+**Тип:** `(locale: string) => string`
+</p>
+
+Заменяет подчеркивания (`_`) на дефисы (`-`) в заданной локали перед возвратом версии в нижнем регистре.
+
+```astro title="src/pages/index.astro"
+---
+import { normalizeTheLocale } from "astro:i18n";
+
+normalizeTheLocale("it_VT") // возвращает `it-vt`
+// Предполагая, что текущая локаль `"pt-PT"`:
+normalizeTheLocale(Astro.currentLocale) // возвращает `pt-pt`
+---
+```
+
+### `pathHasLocale()`
+
+<p>
+
+**Тип:** `(path: string) => boolean`<br />
+<Since v="4.6.0" />
+</p>
+
+Проверяет, содержит ли данный путь настроенную локаль.
+
+Это полезно для предотвращения ошибок перед использованием утилиты i18n, которая зависит от локали из пути URL.
+
+```js title="astro.config.mjs"
+export default defineConfig({
+  i18n: {
+    locales: [
+      { codes: ["it-VT", "it"], path: "italiano" },
+      "es"
+    ]
+  }
+})
+```
+
+```astro title="src/pages/index.astro"
+---
+import { pathHasLocale } from "astro:i18n";
+
+pathHasLocale("italiano"); // возвращает `true`
+pathHasLocale("es"); // возвращает `true`
+pathHasLocale('/es/blog/'); // возвращает `true`
+pathHasLocale("it-VT"); // возвращает `false`
+---
+```
+
+### `toCodes()`
+
+<p>
+
+**Тип:** `(locales: Locales) => string[]`<br />
+<Since v="4.0.0" />
+</p>
+
+Извлекает настроенные коды локалей для каждой локали, определенной в вашей конфигурации. Когда с локалью связано несколько кодов, в массив будет добавлен только первый.
+
+```js title="astro.config.mjs"
+export default defineConfig({
+  i18n: {
+    locales: [
+      { codes: ["it-VT", "it"], path: "italiano" },
+      "es"
+    ]
+  }
+})
+```
+
+```astro title="src/pages/index.astro"
+---
+import { i18n } from "astro:config/client";
+import { toCodes } from "astro:i18n";
+
+toCodes(i18n!.locales); // ["it-VT", "es"]
+---
+```
+
+### `toPaths()`
+
+<p>
+
+**Тип:** `(locales: Locales) => string[]`<br />
+<Since v="4.0.0" />
+</p>
+
+Извлекает настроенные пути локалей для каждой локали, определенной в вашей конфигурации.
+
+```js title="astro.config.mjs"
+export default defineConfig({
+  i18n: {
+    locales: [
+      { codes: ["it-VT", "it"], path: "italiano" },
+      "es"
+    ]
+  }
+})
+```
+
+```astro title="src/pages/index.astro"
+---
+import { i18n } from "astro:config/client";
+import { toPaths } from "astro:i18n";
+
+toPaths(i18n!.locales); // ["italiano", "es"]
+---
 ```
