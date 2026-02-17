@@ -5,21 +5,12 @@ export default defineConfig({
 		name: 'oldiberezkoo/docs',
 	},
 	sourceLocale: {
-		label: 'English',
-		lang: 'en',
+		label: 'Russian ',
+		lang: 'ru',
 		parameters: {
-			tag: 'en',
+			tag: 'ru',
 		},
 	},
-	locales: [
-		{
-			label: 'Русский',
-			lang: "ru",
-			parameters: {
-				tag: 'ru',
-			},
-		},
-	],
 	files: [
 		{
 			include: ['src/content/i18n/en.yml'],

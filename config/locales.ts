@@ -5,13 +5,12 @@ import type { StarlightUserConfig } from '@astrojs/starlight/types';
  * @see https://starlight.astro.build/reference/configuration/#locales
  */
 export const localesConfig = {
-	en: { label: 'English', lang: 'en', dir: 'ltr' },
 	ru: { label: 'Русский', lang: 'ru', dir: 'ltr' },
 
 } satisfies StarlightUserConfig['locales'];
 
 /** The only two languages to build to speed up Astro's smoke tests. */
-const twoLanguages: (keyof typeof localesConfig)[] = ['en', 'ru'];
+const twoLanguages: (keyof typeof localesConfig)[] = ['ru'];
 
 /** Starlight i18n configuration used for Astro's smoke tests. */
 export const twoLocalesConfig = Object.fromEntries(
